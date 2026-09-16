@@ -47,6 +47,15 @@ test('sends bounded structured-output request to the Responses API', async () =>
   assert.equal(result.title, 'Movilidad urbana')
 })
 
+test('exposes an upstream HTTP status without exposing OpenAI response details', async () => {
+  const describeMap = createOpenAIDescriber({
+    apiKey: 'test-key',
+    fetchImpl: async () => new Response(JSON.stringify({ error: { code: 'unsupported_parameter' } }), { status: 400 })
+  })
+
+  await assert.rejects(() => describeMap(request), (error) => error.code === 'OPENAI_400' && error.status === 400 && error.message === 'OpenAI Responses API request failed')
+})
+
 test('fails safely when OpenAI returns invalid structured content', async () => {
   const describeMap = createOpenAIDescriber({
     apiKey: 'test-key',
