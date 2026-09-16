@@ -1,0 +1,13 @@
+{
+  "name": "map-narrator",
+  "label": "Map Narrator",
+  "type": "widget",
+  "version": "1.0.0",
+  "exbVersion": "1.21.0",
+  "author": "GeoGeeks",
+  "description": "Generates a bounded text description from the connected map's visible metadata.",
+  "license": "http://www.apache.org/licenses/LICENSE-2.0",
+  "dependency": ["jimu-arcgis"],
+  "properties": { "supportAutoSize": true },
+  "translatedLocales": ["en"]
+}
