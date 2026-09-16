@@ -23,6 +23,16 @@ function assertDescription(value) {
   return value
 }
 
+function responseText (payload) {
+  if (typeof payload?.output_text === 'string') return payload.output_text
+  const content = payload?.output
+    ?.filter((item) => item?.type === 'message')
+    .flatMap((item) => Array.isArray(item.content) ? item.content : [])
+    .find((item) => item?.type === 'output_text' && typeof item.text === 'string')
+  if (typeof content?.text === 'string') return content.text
+  throw new Error('OpenAI response does not contain output text')
+}
+
 function createOpenAIDescriber({ apiKey, model = 'gpt-5-mini', fetchImpl = globalThis.fetch }) {
   if (!apiKey) throw new Error('OPENAI_API_KEY is required')
   if (typeof fetchImpl !== 'function') throw new TypeError('fetch implementation is required')
@@ -49,7 +59,7 @@ function createOpenAIDescriber({ apiKey, model = 'gpt-5-mini', fetchImpl = globa
 
     try {
       const payload = await response.json()
-      return assertDescription(JSON.parse(payload.output_text))
+      return assertDescription(JSON.parse(responseText(payload)))
     } catch {
       const error = new Error('OpenAI returned invalid structured content')
       error.code = 'UPSTREAM_ERROR'

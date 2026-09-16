@@ -21,13 +21,19 @@ test('sends bounded structured-output request to the Responses API', async () =>
     fetchImpl: async (_url, options) => {
       sent = JSON.parse(options.body)
       return new Response(JSON.stringify({
-        output_text: JSON.stringify({
-          title: 'Movilidad urbana',
-          description: 'Una capa de carriles bici está visible.',
-          highlightedLayers: ['Carriles bici'],
-          observedPatterns: [],
-          limitations: ['No se analizaron entidades individuales.']
-        })
+        output: [{
+          type: 'message',
+          content: [{
+            type: 'output_text',
+            text: JSON.stringify({
+              title: 'Movilidad urbana',
+              description: 'Una capa de carriles bici está visible.',
+              highlightedLayers: ['Carriles bici'],
+              observedPatterns: [],
+              limitations: ['No se analizaron entidades individuales.']
+            })
+          }]
+        }]
       }), { status: 200 })
     }
   })
