@@ -53,6 +53,26 @@ test('returns a structured description for valid normalized map metadata', async
   assert.equal(response.body.description.title, 'Movilidad urbana')
 })
 
+test('reuses a successful description for an equivalent map context', async (t) => {
+  let calls = 0
+  const server = createServer({
+    describeMap: async () => {
+      calls += 1
+      return { title: 'Movilidad urbana', description: 'Resumen.', highlightedLayers: [], observedPatterns: [], limitations: [] }
+    }
+  })
+  server.listen(0, '127.0.0.1')
+  await once(server, 'listening')
+  t.after(() => server.close())
+
+  const first = await request(server, { context: validContext, locale: 'es' })
+  const second = await request(server, { locale: 'es', context: validContext })
+
+  assert.equal(first.body.cached, false)
+  assert.equal(second.body.cached, true)
+  assert.equal(calls, 1)
+})
+
 test('rejects malformed map metadata before calling the model', async (t) => {
   let called = false
   const server = createServer({ describeMap: async () => { called = true } })
