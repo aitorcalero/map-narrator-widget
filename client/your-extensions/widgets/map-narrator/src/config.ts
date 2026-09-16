@@ -7,7 +7,8 @@ export function resolveApiUrl (config: Config | undefined): string | undefined {
   if (!config?.apiUrl) return undefined
   try {
     const url = new URL(config.apiUrl)
-    return url.protocol === 'https:' ? url.toString() : undefined
+    const isLoopback = url.hostname === '127.0.0.1' || url.hostname === 'localhost' || url.hostname === '[::1]'
+    return url.protocol === 'https:' || (url.protocol === 'http:' && isLoopback) ? url.toString() : undefined
   } catch {
     return undefined
   }

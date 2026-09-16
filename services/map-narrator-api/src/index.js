@@ -9,6 +9,7 @@ if (!apiKey) {
 }
 
 const server = createServer({
-  describeMap: createOpenAIDescriber({ apiKey, model: process.env.OPENAI_MODEL ?? 'gpt-5-mini' })
+  describeMap: createOpenAIDescriber({ apiKey, model: process.env.OPENAI_MODEL ?? 'gpt-5-mini' }),
+  allowedOrigin: process.env.MAP_NARRATOR_ALLOWED_ORIGIN
 })
 server.listen(port, '0.0.0.0', () => console.log(`map-narrator-api listening on ${port}`))

@@ -53,11 +53,23 @@ function createServer ({
   cache = new Map(),
   maxRequestsPerWindow = 20,
   rateWindowMs = 60 * 1000,
-  rateCounters = new Map()
+  rateCounters = new Map(),
+  allowedOrigin
 }) {
   if (typeof describeMap !== 'function') throw new TypeError('describeMap must be a function')
 
   return http.createServer(async (request, response) => {
+    const origin = request.headers.origin
+    if (allowedOrigin && origin === allowedOrigin) {
+      response.setHeader('access-control-allow-origin', allowedOrigin)
+      response.setHeader('vary', 'Origin')
+      response.setHeader('access-control-allow-methods', 'POST, OPTIONS')
+      response.setHeader('access-control-allow-headers', 'content-type')
+    }
+    if (request.method === 'OPTIONS' && request.url === '/api/map-description') {
+      response.writeHead(origin === allowedOrigin ? 204 : 403)
+      return response.end()
+    }
     if (request.method === 'GET' && request.url === '/healthz') {
       return sendJson(response, 200, { status: 'ok' })
     }

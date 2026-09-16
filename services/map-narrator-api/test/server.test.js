@@ -5,7 +5,7 @@ const http = require('node:http')
 
 const { createServer } = require('../src/server')
 
-async function request(server, payload) {
+async function request(server, payload, extraHeaders = {}) {
   const address = server.address()
   return await new Promise((resolve, reject) => {
     const body = JSON.stringify(payload)
@@ -14,12 +14,12 @@ async function request(server, payload) {
       port: address.port,
       path: '/api/map-description',
       method: 'POST',
-      headers: { 'content-type': 'application/json', 'content-length': Buffer.byteLength(body) }
+      headers: { 'content-type': 'application/json', 'content-length': Buffer.byteLength(body), ...extraHeaders }
     }, (response) => {
       let text = ''
       response.setEncoding('utf8')
       response.on('data', (chunk) => { text += chunk })
-      response.on('end', () => resolve({ status: response.statusCode, body: JSON.parse(text) }))
+      response.on('end', () => resolve({ status: response.statusCode, headers: response.headers, body: JSON.parse(text) }))
     })
     req.on('error', reject)
     req.end(body)
@@ -71,6 +71,22 @@ test('reuses a successful description for an equivalent map context', async (t) 
   assert.equal(first.body.cached, false)
   assert.equal(second.body.cached, true)
   assert.equal(calls, 1)
+})
+
+test('allows only the configured Experience Builder origin', async (t) => {
+  const server = createServer({
+    allowedOrigin: 'https://127.0.0.1:3001',
+    describeMap: async () => ({ title: 'Movilidad urbana', description: 'Resumen.', highlightedLayers: [], observedPatterns: [], limitations: [] })
+  })
+  server.listen(0, '127.0.0.1')
+  await once(server, 'listening')
+  t.after(() => server.close())
+
+  const allowed = await request(server, { context: validContext }, { origin: 'https://127.0.0.1:3001' })
+  const blocked = await request(server, { context: validContext, style: 'citizen' }, { origin: 'https://evil.example' })
+
+  assert.equal(allowed.headers['access-control-allow-origin'], 'https://127.0.0.1:3001')
+  assert.equal(blocked.headers['access-control-allow-origin'], undefined)
 })
 
 test('rate-limits a caller before forwarding a second request', async (t) => {

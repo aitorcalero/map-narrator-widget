@@ -6,6 +6,11 @@ describe('resolveApiUrl', () => {
     expect(resolveApiUrl({})).toBeUndefined()
   })
 
+  it('permits a loopback HTTP endpoint for local development only', () => {
+    expect(resolveApiUrl({ apiUrl: 'http://127.0.0.1:8787/api/map-description' })).toBe('http://127.0.0.1:8787/api/map-description')
+    expect(resolveApiUrl({ apiUrl: 'http://localhost:8787/api/map-description' })).toBe('http://localhost:8787/api/map-description')
+  })
+
   it('rejects insecure or invalid endpoints', () => {
     expect(resolveApiUrl({ apiUrl: 'http://narrator.example.com/api/map-description' })).toBeUndefined()
     expect(resolveApiUrl({ apiUrl: 'not a URL' })).toBeUndefined()
