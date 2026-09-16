@@ -41,6 +41,7 @@ test('sends bounded structured-output request to the Responses API', async () =>
   const result = await describeMap(request)
 
   assert.equal(sent.model, 'gpt-5-mini')
+  assert.equal(sent.reasoning.effort, 'minimal')
   assert.equal(sent.max_output_tokens, 260)
   assert.equal(sent.text.format.type, 'json_schema')
   assert.equal(sent.input.includes('private'), false)

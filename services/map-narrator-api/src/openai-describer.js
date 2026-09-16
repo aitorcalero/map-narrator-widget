@@ -43,6 +43,7 @@ function createOpenAIDescriber({ apiKey, model = 'gpt-5-mini', fetchImpl = globa
       headers: { authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' },
       body: JSON.stringify({
         model,
+        reasoning: { effort: 'minimal' },
         max_output_tokens: 260,
         input: `Describe this GIS map only from the supplied metadata. Write in ${request.locale}. Style: ${request.style}. Separate observed facts from cautious inferences; never invent entities, values, causes, or spatial relationships. Always state relevant limitations.\n\n${JSON.stringify(request.context)}`,
         text: {
