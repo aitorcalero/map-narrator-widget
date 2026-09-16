@@ -73,6 +73,23 @@ test('reuses a successful description for an equivalent map context', async (t) 
   assert.equal(calls, 1)
 })
 
+test('rate-limits a caller before forwarding a second request', async (t) => {
+  const server = createServer({
+    maxRequestsPerWindow: 1,
+    describeMap: async () => ({ title: 'Movilidad urbana', description: 'Resumen.', highlightedLayers: [], observedPatterns: [], limitations: [] })
+  })
+  server.listen(0, '127.0.0.1')
+  await once(server, 'listening')
+  t.after(() => server.close())
+
+  const first = await request(server, { context: validContext })
+  const second = await request(server, { context: validContext, style: 'citizen' })
+
+  assert.equal(first.status, 200)
+  assert.equal(second.status, 429)
+  assert.equal(second.body.error.code, 'RATE_LIMITED')
+})
+
 test('rejects malformed map metadata before calling the model', async (t) => {
   let called = false
   const server = createServer({ describeMap: async () => { called = true } })

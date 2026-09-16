@@ -47,7 +47,14 @@ function cacheKey(request) {
   return crypto.createHash('sha256').update(JSON.stringify(canonicalize(request))).digest('hex')
 }
 
-function createServer({ describeMap, now = () => Date.now(), cache = new Map() }) {
+function createServer ({
+  describeMap,
+  now = () => Date.now(),
+  cache = new Map(),
+  maxRequestsPerWindow = 20,
+  rateWindowMs = 60 * 1000,
+  rateCounters = new Map()
+}) {
   if (typeof describeMap !== 'function') throw new TypeError('describeMap must be a function')
 
   return http.createServer(async (request, response) => {
@@ -56,6 +63,18 @@ function createServer({ describeMap, now = () => Date.now(), cache = new Map() }
     }
     if (request.method !== 'POST' || request.url !== '/api/map-description') {
       return sendJson(response, 404, { error: { code: 'NOT_FOUND', message: 'Route not found' } })
+    }
+
+    const caller = request.socket.remoteAddress ?? 'unknown'
+    const currentTime = now()
+    const counter = rateCounters.get(caller)
+    const activeCounter = !counter || counter.windowStartedAt + rateWindowMs <= currentTime
+      ? { windowStartedAt: currentTime, count: 0 }
+      : counter
+    activeCounter.count += 1
+    rateCounters.set(caller, activeCounter)
+    if (activeCounter.count > maxRequestsPerWindow) {
+      return sendJson(response, 429, { error: { code: 'RATE_LIMITED', message: 'Too many narration requests' } })
     }
 
     try {
