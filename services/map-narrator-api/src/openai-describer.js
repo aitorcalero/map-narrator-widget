@@ -59,12 +59,21 @@ function createOpenAIDescriber({ apiKey, model = 'gpt-5-mini', fetchImpl = globa
       throw error
     }
 
+    const payload = await response.json()
+    if (payload.status === 'incomplete') {
+      const reason = typeof payload.incomplete_details?.reason === 'string'
+        ? payload.incomplete_details.reason.toUpperCase().replace(/[^A-Z0-9]+/g, '_')
+        : 'UNKNOWN'
+      const error = new Error('OpenAI response was incomplete')
+      error.code = `OPENAI_INCOMPLETE_${reason}`
+      throw error
+    }
     try {
-      const payload = await response.json()
       return assertDescription(JSON.parse(responseText(payload)))
-    } catch {
+    } catch (cause) {
+      if (cause?.code?.startsWith?.('OPENAI_INCOMPLETE_')) throw cause
       const error = new Error('OpenAI returned invalid structured content')
-      error.code = 'UPSTREAM_ERROR'
+      error.code = 'OPENAI_INVALID_STRUCTURED_OUTPUT'
       throw error
     }
   }

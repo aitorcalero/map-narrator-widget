@@ -57,13 +57,22 @@ test('exposes an upstream HTTP status without exposing OpenAI response details',
   await assert.rejects(() => describeMap(request), (error) => error.code === 'OPENAI_400' && error.status === 400 && error.message === 'OpenAI Responses API request failed')
 })
 
+test('identifies incomplete OpenAI output without exposing response data', async () => {
+  const describeMap = createOpenAIDescriber({
+    apiKey: 'test-key',
+    fetchImpl: async () => new Response(JSON.stringify({ status: 'incomplete', incomplete_details: { reason: 'max_output_tokens' }, output: [] }), { status: 200 })
+  })
+
+  await assert.rejects(() => describeMap(request), (error) => error.code === 'OPENAI_INCOMPLETE_MAX_OUTPUT_TOKENS')
+})
+
 test('fails safely when OpenAI returns invalid structured content', async () => {
   const describeMap = createOpenAIDescriber({
     apiKey: 'test-key',
     fetchImpl: async () => new Response(JSON.stringify({ output_text: 'not json' }), { status: 200 })
   })
 
-  await assert.rejects(() => describeMap(request), { code: 'UPSTREAM_ERROR' })
+  await assert.rejects(() => describeMap(request), { code: 'OPENAI_INVALID_STRUCTURED_OUTPUT' })
 })
 
 test('requires an API key without exposing it in errors', () => {
