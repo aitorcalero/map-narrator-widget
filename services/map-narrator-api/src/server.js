@@ -1,0 +1,91 @@
+const crypto = require('node:crypto')
+const http = require('node:http')
+const { normalizeMapContext } = require('./map-context')
+
+const MAX_BODY_BYTES = 64 * 1024
+const CACHE_TTL_MS = 5 * 60 * 1000
+
+function sendJson(response, status, body) {
+  response.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
+  response.end(JSON.stringify(body))
+}
+
+function readJson(request) {
+  return new Promise((resolve, reject) => {
+    let size = 0
+    let content = ''
+    request.setEncoding('utf8')
+    request.on('data', (chunk) => {
+      size += Buffer.byteLength(chunk)
+      if (size > MAX_BODY_BYTES) {
+        reject(Object.assign(new Error('request body is too large'), { status: 413, code: 'PAYLOAD_TOO_LARGE' }))
+        request.destroy()
+        return
+      }
+      content += chunk
+    })
+    request.on('end', () => {
+      try {
+        resolve(JSON.parse(content))
+      } catch {
+        reject(Object.assign(new Error('request body must be valid JSON'), { status: 400, code: 'INVALID_REQUEST' }))
+      }
+    })
+    request.on('error', reject)
+  })
+}
+
+function canonicalize(value) {
+  if (Array.isArray(value)) return value.map(canonicalize)
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.keys(value).sort().map((key) => [key, canonicalize(value[key])]))
+  }
+  return value
+}
+
+function cacheKey(request) {
+  return crypto.createHash('sha256').update(JSON.stringify(canonicalize(request))).digest('hex')
+}
+
+function createServer({ describeMap, now = () => Date.now(), cache = new Map() }) {
+  if (typeof describeMap !== 'function') throw new TypeError('describeMap must be a function')
+
+  return http.createServer(async (request, response) => {
+    if (request.method === 'GET' && request.url === '/healthz') {
+      return sendJson(response, 200, { status: 'ok' })
+    }
+    if (request.method !== 'POST' || request.url !== '/api/map-description') {
+      return sendJson(response, 404, { error: { code: 'NOT_FOUND', message: 'Route not found' } })
+    }
+
+    try {
+      const input = await readJson(request)
+      let context
+      try {
+        context = normalizeMapContext(input.context)
+      } catch (error) {
+        error.status = 400
+        error.code = 'INVALID_REQUEST'
+        throw error
+      }
+      const locale = typeof input.locale === 'string' && input.locale ? input.locale.slice(0, 16) : 'es'
+      const style = typeof input.style === 'string' && input.style ? input.style.slice(0, 32) : 'technical'
+      const normalizedRequest = { context, locale, style, promptVersion: 'v1' }
+      const key = cacheKey(normalizedRequest)
+      const cached = cache.get(key)
+      if (cached && cached.expiresAt > now()) {
+        return sendJson(response, 200, { description: cached.description, cached: true })
+      }
+
+      const description = await describeMap(normalizedRequest)
+      cache.set(key, { description, expiresAt: now() + CACHE_TTL_MS })
+      return sendJson(response, 200, { description, cached: false })
+    } catch (error) {
+      const status = error.status ?? 502
+      const code = error.code ?? 'UPSTREAM_ERROR'
+      return sendJson(response, status, { error: { code, message: status === 502 ? 'Description service unavailable' : error.message } })
+    }
+  })
+}
+
+module.exports = { CACHE_TTL_MS, cacheKey, createServer }
