@@ -48,6 +48,26 @@ test('sends bounded structured-output request to the Responses API', async () =>
   assert.equal(result.title, 'Movilidad urbana')
 })
 
+test('sends text and an image input for visual narration', async () => {
+  let sent
+  const describeMap = createOpenAIDescriber({
+    apiKey: 'test-key',
+    fetchImpl: async (_url, options) => {
+      sent = JSON.parse(options.body)
+      return new Response(JSON.stringify({ output_text: JSON.stringify({
+        title: 'Vista visual', description: 'Resumen visual.', spatialLayout: [], visualElements: [], visibleLabels: [], legendAndSymbols: [], highlightedLayers: [], observedPatterns: [], limitations: []
+      }) }), { status: 200 })
+    }
+  })
+  await describeMap({ ...request, visual: { enabled: true, dataUrl: 'data:image/png;base64,iVBORw0KGgo=', mimeType: 'image/png', width: 10, height: 10 } })
+
+  assert.equal(Array.isArray(sent.input), true)
+  assert.equal(sent.input[0].content[1].type, 'input_image')
+  assert.equal(sent.input[0].content[1].image_url, 'data:image/png;base64,iVBORw0KGgo=')
+  assert.equal(sent.input[0].content[1].detail, 'high')
+  assert.equal(sent.max_output_tokens, 900)
+})
+
 test('exposes an upstream HTTP status without exposing OpenAI response details', async () => {
   const describeMap = createOpenAIDescriber({
     apiKey: 'test-key',

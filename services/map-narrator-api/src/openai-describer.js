@@ -11,6 +11,28 @@ const DESCRIPTION_SCHEMA = {
   }
 }
 
+const VISUAL_DESCRIPTION_SCHEMA = {
+  ...DESCRIPTION_SCHEMA,
+  required: [...DESCRIPTION_SCHEMA.required, 'spatialLayout', 'visualElements', 'visibleLabels', 'legendAndSymbols'],
+  properties: {
+    ...DESCRIPTION_SCHEMA.properties,
+    spatialLayout: { type: 'array', maxItems: 8, items: { type: 'string', maxLength: 500 } },
+    visualElements: { type: 'array', maxItems: 12, items: { type: 'string', maxLength: 500 } },
+    visibleLabels: { type: 'array', maxItems: 20, items: { type: 'string', maxLength: 200 } },
+    legendAndSymbols: { type: 'array', maxItems: 12, items: { type: 'string', maxLength: 500 } }
+  }
+}
+
+function buildResponseInput (request) {
+  const visualInstructions = request.visual
+    ? 'Describe the current rendered map image for a person who cannot see it. Start with overall layout, then relative spatial relationships, visible symbols, colors, labels, and patterns. Use supplied GIS metadata only to corroborate visible meaning. Do not invent labels, values, causes, entities, or relationships. State uncertainty and unreadable details explicitly.'
+    : 'Describe this GIS map only from the supplied metadata. Separate observed facts from cautious inferences; never invent entities, values, causes, or spatial relationships. Always state relevant limitations.'
+  const text = `${visualInstructions} Write in ${request.locale}. Style: ${request.style}.\n\n${JSON.stringify(request.context)}`
+  return request.visual
+    ? [{ role: 'user', content: [{ type: 'input_text', text }, { type: 'input_image', image_url: request.visual.dataUrl, detail: 'high' }] }]
+    : text
+}
+
 function assertDescription(value) {
   if (!value || typeof value !== 'object' || typeof value.title !== 'string' || typeof value.description !== 'string') {
     throw new Error('invalid structured response')
@@ -44,10 +66,10 @@ function createOpenAIDescriber({ apiKey, model = 'gpt-5-mini', fetchImpl = globa
       body: JSON.stringify({
         model,
         reasoning: { effort: 'minimal' },
-        max_output_tokens: 600,
-        input: `Describe this GIS map only from the supplied metadata. Write in ${request.locale}. Style: ${request.style}. Separate observed facts from cautious inferences; never invent entities, values, causes, or spatial relationships. Always state relevant limitations.\n\n${JSON.stringify(request.context)}`,
+        max_output_tokens: request.visual ? 900 : 600,
+        input: buildResponseInput(request),
         text: {
-          format: { type: 'json_schema', name: 'map_description', strict: true, schema: DESCRIPTION_SCHEMA }
+          format: { type: 'json_schema', name: request.visual ? 'visual_map_description' : 'map_description', strict: true, schema: request.visual ? VISUAL_DESCRIPTION_SCHEMA : DESCRIPTION_SCHEMA }
         }
       })
     })
