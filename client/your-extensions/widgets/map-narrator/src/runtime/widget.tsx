@@ -4,6 +4,7 @@ import { JimuMapViewComponent, type JimuMapView } from 'jimu-arcgis'
 import type { Config } from '../config'
 import { resolveApiUrl } from '../config'
 import { buildMapContext } from './map-context'
+import { narrationContentStyle } from './layout'
 
 type Description = {
   title: string
@@ -54,7 +55,7 @@ export default function Widget (props: AllWidgetProps<Config>) {
         : undefined
 
   return (
-    <div className='widget-map-narrator jimu-widget h-100 p-3'>
+    <div className='widget-map-narrator jimu-widget h-100 p-3 d-flex flex-column overflow-hidden'>
       <h3 className='h5'>Narrador del mapa</h3>
       <p className='text-muted'>Genera un resumen basado en la extensión y las capas visibles del mapa.</p>
       <Button type='primary' onClick={onDescribe} disabled={Boolean(disabledMessage) || loading} aria-describedby='map-narrator-status'>
@@ -65,7 +66,7 @@ export default function Widget (props: AllWidgetProps<Config>) {
       </div>
       {error && <div className='alert alert-danger mt-3' role='alert'>{error}</div>}
       {description && (
-        <section className='mt-3' aria-label='Descripción generada del mapa'>
+        <section className='mt-3' style={narrationContentStyle} aria-label='Descripción generada del mapa'>
           <h4 className='h6'>{description.title}</h4>
           <p>{description.description}</p>
           {description.highlightedLayers.length > 0 && <p><strong>Capas destacadas:</strong> {description.highlightedLayers.join(', ')}</p>}
