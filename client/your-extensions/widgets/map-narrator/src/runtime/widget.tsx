@@ -2,8 +2,9 @@ import { React, type AllWidgetProps } from 'jimu-core'
 import { Button } from 'jimu-ui'
 import { JimuMapViewComponent, type JimuMapView } from 'jimu-arcgis'
 import type { Config } from '../config'
-import { resolveApiUrl } from '../config'
+import { resolveApiUrl, resolveNarrationMode } from '../config'
 import { buildMapContext } from './map-context'
+import { captureVisualMap } from './visual-capture'
 import { narrationContentStyle } from './layout'
 
 type Description = {
@@ -19,7 +20,9 @@ export default function Widget (props: AllWidgetProps<Config>) {
   const [description, setDescription] = React.useState<Description>()
   const [error, setError] = React.useState<string>()
   const [loading, setLoading] = React.useState(false)
+  const [operationStatus, setOperationStatus] = React.useState<string>()
   const apiUrl = resolveApiUrl(props.config)
+  const narrationMode = resolveNarrationMode(props.config)
   const mapWidgetId = props.useMapWidgetIds?.[0]
 
   const onDescribe = async () => {
@@ -27,13 +30,18 @@ export default function Widget (props: AllWidgetProps<Config>) {
     setLoading(true)
     setError(undefined)
     try {
+      const visual = narrationMode === 'visual'
+        ? (setOperationStatus('Capturando la vista actual del mapa…'), await captureVisualMap(mapView.view))
+        : undefined
+      setOperationStatus(visual ? 'Analizando visualmente el mapa…' : 'Analizando la configuración visible del mapa…')
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           context: buildMapContext(mapView.view),
           locale: document.documentElement.lang || 'es',
-          style: props.config?.style ?? 'technical'
+          style: narrationMode === 'visual' ? 'accessible' : props.config?.style ?? 'technical',
+          visual
         })
       })
       const payload = await response.json()
@@ -43,6 +51,7 @@ export default function Widget (props: AllWidgetProps<Config>) {
       setError(caught instanceof Error ? caught.message : 'No se pudo generar la descripción.')
     } finally {
       setLoading(false)
+      setOperationStatus(undefined)
     }
   }
 
@@ -59,10 +68,11 @@ export default function Widget (props: AllWidgetProps<Config>) {
       <h3 className='h5'>Narrador del mapa</h3>
       <p className='text-muted'>Genera un resumen basado en la extensión y las capas visibles del mapa.</p>
       <Button type='primary' onClick={onDescribe} disabled={Boolean(disabledMessage) || loading} aria-describedby='map-narrator-status'>
-        {loading ? 'Analizando mapa…' : 'Describir mapa'}
+        {loading ? operationStatus ?? 'Analizando mapa…' : narrationMode === 'visual' ? 'Describir visualmente el mapa' : 'Describir metadatos del mapa'}
       </Button>
+      {narrationMode === 'visual' && <p className='text-muted mt-2 mb-0'>Se enviará una captura de la vista actual para generar la descripción; no se guarda.</p>}
       <div id='map-narrator-status' className='mt-3' role='status' aria-live='polite'>
-        {disabledMessage ?? (loading ? 'Analizando la configuración visible del mapa…' : '')}
+        {disabledMessage ?? operationStatus ?? ''}
       </div>
       {error && <div className='alert alert-danger mt-3' role='alert'>{error}</div>}
       {description && (
