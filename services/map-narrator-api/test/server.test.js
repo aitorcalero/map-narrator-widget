@@ -53,6 +53,30 @@ test('returns a structured description for valid normalized map metadata', async
   assert.equal(response.body.description.title, 'Movilidad urbana')
 })
 
+test('forwards validated visual input and never caches it', async (t) => {
+  let calls = 0
+  let seenVisual
+  const server = createServer({
+    describeMap: async (input) => {
+      calls += 1
+      seenVisual = input.visual
+      return { title: 'Visual', description: 'Vista.', highlightedLayers: [], observedPatterns: [], limitations: [] }
+    }
+  })
+  server.listen(0, '127.0.0.1')
+  await once(server, 'listening')
+  t.after(() => server.close())
+  const visual = { enabled: true, imageDataUrl: 'data:image/png;base64,iVBORw0KGgo=', width: 1280, height: 720 }
+
+  const first = await request(server, { context: validContext, visual })
+  const second = await request(server, { context: validContext, visual })
+
+  assert.equal(first.body.cached, false)
+  assert.equal(second.body.cached, false)
+  assert.equal(calls, 2)
+  assert.deepEqual(seenVisual, { enabled: true, dataUrl: visual.imageDataUrl, mimeType: 'image/png', width: 1280, height: 720 })
+})
+
 test('reuses a successful description for an equivalent map context', async (t) => {
   let calls = 0
   const server = createServer({

@@ -1,8 +1,9 @@
 const crypto = require('node:crypto')
 const http = require('node:http')
 const { normalizeMapContext } = require('./map-context')
+const { normalizeVisualRequest } = require('./visual-request')
 
-const MAX_BODY_BYTES = 64 * 1024
+const MAX_BODY_BYTES = 2 * 1024 * 1024
 const CACHE_TTL_MS = 5 * 60 * 1000
 
 function sendJson(response, status, body) {
@@ -101,15 +102,29 @@ function createServer ({
       }
       const locale = typeof input.locale === 'string' && input.locale ? input.locale.slice(0, 16) : 'es'
       const style = typeof input.style === 'string' && input.style ? input.style.slice(0, 32) : 'technical'
-      const normalizedRequest = { context, locale, style, promptVersion: 'v1' }
-      const key = cacheKey(normalizedRequest)
-      const cached = cache.get(key)
-      if (cached && cached.expiresAt > now()) {
-        return sendJson(response, 200, { description: cached.description, cached: true })
+      let visual
+      if (input.visual?.enabled) {
+        try {
+          visual = normalizeVisualRequest(input.visual)
+        } catch (error) {
+          error.status = 400
+          error.code = 'INVALID_REQUEST'
+          throw error
+        }
+      }
+      const normalizedRequest = { context, locale, style, promptVersion: visual ? 'visual-v1' : 'v1', visual }
+      if (!visual) {
+        const key = cacheKey(normalizedRequest)
+        const cached = cache.get(key)
+        if (cached && cached.expiresAt > now()) {
+          return sendJson(response, 200, { description: cached.description, cached: true })
+        }
+        const description = await describeMap(normalizedRequest)
+        cache.set(key, { description, expiresAt: now() + CACHE_TTL_MS })
+        return sendJson(response, 200, { description, cached: false })
       }
 
       const description = await describeMap(normalizedRequest)
-      cache.set(key, { description, expiresAt: now() + CACHE_TTL_MS })
       return sendJson(response, 200, { description, cached: false })
     } catch (error) {
       const status = error.status ?? 502
