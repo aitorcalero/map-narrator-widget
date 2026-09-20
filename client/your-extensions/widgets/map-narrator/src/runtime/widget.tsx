@@ -10,6 +10,10 @@ import { narrationContentStyle } from './layout'
 type Description = {
   title: string
   description: string
+  spatialLayout?: string[]
+  visualElements?: string[]
+  visibleLabels?: string[]
+  legendAndSymbols?: string[]
   highlightedLayers: string[]
   observedPatterns: string[]
   limitations: string[]
@@ -79,6 +83,10 @@ export default function Widget (props: AllWidgetProps<Config>) {
         <section className='mt-3' style={narrationContentStyle} aria-label='Descripción generada del mapa'>
           <h4 className='h6'>{description.title}</h4>
           <p>{description.description}</p>
+          {description.spatialLayout && description.spatialLayout.length > 0 && <><h4 className='h6'>Distribución espacial</h4><ul>{description.spatialLayout.map((item, index) => <li key={`layout-${index}`}>{item}</li>)}</ul></>}
+          {description.visualElements && description.visualElements.length > 0 && <><h4 className='h6'>Elementos visuales</h4><ul>{description.visualElements.map((item, index) => <li key={`visual-${index}`}>{item}</li>)}</ul></>}
+          {description.legendAndSymbols && description.legendAndSymbols.length > 0 && <><h4 className='h6'>Leyenda y símbolos</h4><ul>{description.legendAndSymbols.map((item, index) => <li key={`legend-${index}`}>{item}</li>)}</ul></>}
+          {description.visibleLabels && description.visibleLabels.length > 0 && <><h4 className='h6'>Etiquetas visibles</h4><ul>{description.visibleLabels.map((item, index) => <li key={`label-${index}`}>{item}</li>)}</ul></>}
           {description.highlightedLayers.length > 0 && <p><strong>Capas destacadas:</strong> {description.highlightedLayers.join(', ')}</p>}
           {description.observedPatterns.length > 0 && <p><strong>Patrones:</strong> {description.observedPatterns.join(' ')}</p>}
           <p><strong>Limitaciones:</strong> {description.limitations.join(' ')}</p>
