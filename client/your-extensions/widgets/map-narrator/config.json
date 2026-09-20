@@ -1,4 +1,5 @@
 {
   "apiUrl": "",
-  "style": "technical"
+  "style": "technical",
+  "visualMode": false
 }

@@ -1,6 +1,11 @@
 export interface Config {
   apiUrl?: string
-  style?: 'technical' | 'citizen'
+  style?: 'technical' | 'citizen' | 'accessible'
+  visualMode?: boolean
+}
+
+export function resolveNarrationMode (config: Config | undefined): 'metadata' | 'visual' {
+  return config?.visualMode === true ? 'visual' : 'metadata'
 }
 
 export function resolveApiUrl (config: Config | undefined): string | undefined {

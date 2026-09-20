@@ -1,4 +1,11 @@
-import { resolveApiUrl } from '../src/config'
+import { resolveApiUrl, resolveNarrationMode } from '../src/config'
+
+describe('resolveNarrationMode', () => {
+  it('uses metadata mode by default and requires explicit visual opt-in', () => {
+    expect(resolveNarrationMode({})).toBe('metadata')
+    expect(resolveNarrationMode({ visualMode: true })).toBe('visual')
+  })
+})
 
 describe('resolveApiUrl', () => {
   it('uses the configured HTTPS endpoint and otherwise disables requests', () => {
