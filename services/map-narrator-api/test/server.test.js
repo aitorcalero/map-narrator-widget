@@ -134,7 +134,7 @@ test('rate-limits a caller before forwarding a second request', async (t) => {
 
 test('emits a sanitized forensic event with request correlation for upstream failures', async (t) => {
   const events = []
-  const upstreamError = Object.assign(new Error('OpenAI Responses API request failed'), { status: 502, code: 'OPENAI_401' })
+  const upstreamError = Object.assign(new Error('OpenAI Responses API request failed'), { status: 502, code: 'OPENAI_401', upstreamRequestId: 'req_openai_401' })
   const server = createServer({
     forensics: (event) => events.push(event),
     describeMap: async () => { throw upstreamError }
@@ -148,6 +148,7 @@ test('emits a sanitized forensic event with request correlation for upstream fai
   assert.equal(response.status, 502)
   assert.equal(response.body.error.code, 'OPENAI_401')
   assert.equal(response.body.diagnostic.stage, 'upstream')
+  assert.equal(response.body.diagnostic.upstreamRequestId, 'req_openai_401')
   assert.match(response.body.diagnostic.requestId, /^[0-9a-f-]{36}$/)
   assert.deepEqual(events.length, 1)
   assert.equal(events[0].requestId, response.body.diagnostic.requestId)

@@ -71,10 +71,10 @@ test('sends text and an image input for visual narration', async () => {
 test('exposes an upstream HTTP status without exposing OpenAI response details', async () => {
   const describeMap = createOpenAIDescriber({
     apiKey: 'test-key',
-    fetchImpl: async () => new Response(JSON.stringify({ error: { code: 'unsupported_parameter' } }), { status: 400 })
+    fetchImpl: async () => new Response(JSON.stringify({ error: { code: 'unsupported_parameter' } }), { status: 400, headers: { 'x-request-id': 'req_openai_123' } })
   })
 
-  await assert.rejects(() => describeMap(request), (error) => error.code === 'OPENAI_400' && error.status === 400 && error.message === 'OpenAI Responses API request failed')
+  await assert.rejects(() => describeMap(request), (error) => error.code === 'OPENAI_400' && error.status === 400 && error.upstreamRequestId === 'req_openai_123' && error.message === 'OpenAI Responses API request failed')
 })
 
 test('identifies incomplete OpenAI output without exposing response data', async () => {

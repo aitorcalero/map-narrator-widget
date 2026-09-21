@@ -64,9 +64,9 @@ function createServer ({
     const requestId = crypto.randomUUID()
     const startedAt = now()
     response.setHeader('x-request-id', requestId)
-    const finish = (status, body, { stage, code, cached, visual } = {}) => {
-      const diagnostic = { requestId, stage, ...(code ? { code } : {}) }
-      forensics({ timestamp: new Date(startedAt).toISOString(), requestId, stage, status, ...(code ? { code } : {}), ...(typeof cached === 'boolean' ? { cached } : {}), ...(typeof visual === 'boolean' ? { visual } : {}), durationMs: Math.max(0, now() - startedAt) })
+    const finish = (status, body, { stage, code, cached, visual, upstreamRequestId } = {}) => {
+      const diagnostic = { requestId, stage, ...(code ? { code } : {}), ...(upstreamRequestId ? { upstreamRequestId } : {}) }
+      forensics({ timestamp: new Date(startedAt).toISOString(), requestId, stage, status, ...(code ? { code } : {}), ...(upstreamRequestId ? { upstreamRequestId } : {}), ...(typeof cached === 'boolean' ? { cached } : {}), ...(typeof visual === 'boolean' ? { visual } : {}), durationMs: Math.max(0, now() - startedAt) })
       return sendJson(response, status, { ...body, diagnostic })
     }
     const origin = request.headers.origin
@@ -142,7 +142,7 @@ function createServer ({
       const status = error.status ?? 502
       const code = error.code ?? 'UPSTREAM_ERROR'
       const stage = status === 400 ? 'validation' : 'upstream'
-      return finish(status, { error: { code, message: status === 502 ? 'Description service unavailable' : error.message } }, { stage, code })
+      return finish(status, { error: { code, message: status === 502 ? 'Description service unavailable' : error.message } }, { stage, code, upstreamRequestId: error.upstreamRequestId })
     }
   })
 }

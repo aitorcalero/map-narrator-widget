@@ -78,6 +78,8 @@ function createOpenAIDescriber({ apiKey, model = 'gpt-5-mini', fetchImpl = globa
       const error = new Error('OpenAI Responses API request failed')
       error.status = response.status
       error.code = `OPENAI_${response.status}`
+      const upstreamRequestId = response.headers.get('x-request-id')
+      if (upstreamRequestId) error.upstreamRequestId = upstreamRequestId
       throw error
     }
 
