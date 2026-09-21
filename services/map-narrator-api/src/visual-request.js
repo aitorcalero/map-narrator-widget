@@ -18,6 +18,13 @@ function normalizeVisualRequest (visual) {
   const base64 = visual.imageDataUrl.slice(PNG_DATA_URL_PREFIX.length)
   if (!base64 || !/^[A-Za-z0-9+/]+={0,2}$/.test(base64)) throw new TypeError('visual request must contain a PNG data URL')
   if (decodedByteLength(base64) > MAX_VISUAL_BYTES) throw new RangeError('visual image is too large')
+  const buffer = Buffer.from(base64, 'base64')
+  if (buffer.length !== decodedByteLength(base64) || buffer.length < 24 || !buffer.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])) || buffer.subarray(12, 16).toString('ascii') !== 'IHDR') {
+    throw new TypeError('visual request must contain a valid PNG')
+  }
+  const pngWidth = buffer.readUInt32BE(16)
+  const pngHeight = buffer.readUInt32BE(20)
+  if (pngWidth !== visual.width || pngHeight !== visual.height) throw new TypeError('visual image dimensions do not match PNG')
   return { enabled: true, dataUrl: visual.imageDataUrl, mimeType: 'image/png', width: visual.width, height: visual.height }
 }
 

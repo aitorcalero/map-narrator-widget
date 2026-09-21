@@ -61,6 +61,9 @@ function createServer ({
 
   return http.createServer(async (request, response) => {
     const origin = request.headers.origin
+    if (allowedOrigin && request.url === '/api/map-description' && origin !== allowedOrigin) {
+      return sendJson(response, 403, { error: { code: 'ORIGIN_FORBIDDEN', message: 'Request origin is not allowed' } })
+    }
     if (allowedOrigin && origin === allowedOrigin) {
       response.setHeader('access-control-allow-origin', allowedOrigin)
       response.setHeader('vary', 'Origin')

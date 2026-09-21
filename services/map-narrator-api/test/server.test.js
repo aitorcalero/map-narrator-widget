@@ -66,7 +66,7 @@ test('forwards validated visual input and never caches it', async (t) => {
   server.listen(0, '127.0.0.1')
   await once(server, 'listening')
   t.after(() => server.close())
-  const visual = { enabled: true, imageDataUrl: 'data:image/png;base64,iVBORw0KGgo=', width: 1280, height: 720 }
+  const visual = { enabled: true, imageDataUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIW2Nk+M/wHwAF/gL+MZ2AyAAAAABJRU5ErkJggg==', width: 1, height: 1 }
 
   const first = await request(server, { context: validContext, visual })
   const second = await request(server, { context: validContext, visual })
@@ -74,7 +74,7 @@ test('forwards validated visual input and never caches it', async (t) => {
   assert.equal(first.body.cached, false)
   assert.equal(second.body.cached, false)
   assert.equal(calls, 2)
-  assert.deepEqual(seenVisual, { enabled: true, dataUrl: visual.imageDataUrl, mimeType: 'image/png', width: 1280, height: 720 })
+  assert.deepEqual(seenVisual, { enabled: true, dataUrl: visual.imageDataUrl, mimeType: 'image/png', width: 1, height: 1 })
 })
 
 test('reuses a successful description for an equivalent map context', async (t) => {
@@ -110,6 +110,7 @@ test('allows only the configured Experience Builder origin', async (t) => {
   const blocked = await request(server, { context: validContext, style: 'citizen' }, { origin: 'https://evil.example' })
 
   assert.equal(allowed.headers['access-control-allow-origin'], 'https://127.0.0.1:3001')
+  assert.equal(blocked.status, 403)
   assert.equal(blocked.headers['access-control-allow-origin'], undefined)
 })
 
