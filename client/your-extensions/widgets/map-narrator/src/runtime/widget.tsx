@@ -5,6 +5,7 @@ import type { Config } from '../config'
 import { resolveApiUrl, resolveNarrationMode } from '../config'
 import { buildMapContext } from './map-context'
 import { captureVisualMap } from './visual-capture'
+import { createDiagnosticEntry, openDiagnosticWindow } from './diagnostics'
 import { narrationContentStyle } from './layout'
 
 type Description = {
@@ -25,16 +26,22 @@ export default function Widget (props: AllWidgetProps<Config>) {
   const [error, setError] = React.useState<string>()
   const [loading, setLoading] = React.useState(false)
   const [operationStatus, setOperationStatus] = React.useState<string>()
+  const [diagnostics, setDiagnostics] = React.useState<unknown[]>([])
   const apiUrl = resolveApiUrl(props.config)
   const narrationMode = resolveNarrationMode(props.config)
   const mapWidgetId = props.useMapWidgetIds?.[0]
 
   const onDescribe = async () => {
     if (!mapView?.view || !apiUrl) return
+    const startedAt = Date.now()
+    const context = buildMapContext(mapView.view)
+    const locale = document.documentElement.lang || 'es'
+    const style = narrationMode === 'visual' ? 'accessible' : props.config?.style ?? 'technical'
+    let visual: { enabled: true, imageDataUrl: string, width: number, height: number } | undefined
     setLoading(true)
     setError(undefined)
     try {
-      const visual = narrationMode === 'visual'
+      visual = narrationMode === 'visual'
         ? (setOperationStatus('Capturando la vista actual del mapa…'), await captureVisualMap(mapView.view))
         : undefined
       setOperationStatus(visual ? 'Analizando visualmente el mapa…' : 'Analizando la configuración visible del mapa…')
@@ -42,17 +49,25 @@ export default function Widget (props: AllWidgetProps<Config>) {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          context: buildMapContext(mapView.view),
-          locale: document.documentElement.lang || 'es',
-          style: narrationMode === 'visual' ? 'accessible' : props.config?.style ?? 'technical',
+          context,
+          locale,
+          style,
           visual
         })
       })
       const payload = await response.json()
-      if (!response.ok) throw new Error(payload?.error?.message ?? 'No se pudo generar la descripción.')
+      if (!response.ok) {
+        const message = payload?.error?.message ?? 'No se pudo generar la descripción.'
+        setDiagnostics(entries => [...entries, createDiagnosticEntry({ mode: narrationMode, apiUrl, context, visual, locale, style, status: response.status, response: payload?.error, durationMs: Date.now() - startedAt })].slice(-20))
+        setError(message)
+        return
+      }
+      setDiagnostics(entries => [...entries, createDiagnosticEntry({ mode: narrationMode, apiUrl, context, visual, locale, style, status: response.status, response: { description: payload.description }, durationMs: Date.now() - startedAt })].slice(-20))
       setDescription(payload.description)
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'No se pudo generar la descripción.')
+      const message = caught instanceof Error ? caught.message : 'No se pudo generar la descripción.'
+      setDiagnostics(entries => [...entries, createDiagnosticEntry({ mode: narrationMode, apiUrl, context, visual, locale, style, error: message, durationMs: Date.now() - startedAt })].slice(-20))
+      setError(message)
     } finally {
       setLoading(false)
       setOperationStatus(undefined)
@@ -74,7 +89,12 @@ export default function Widget (props: AllWidgetProps<Config>) {
       <Button type='primary' onClick={onDescribe} disabled={Boolean(disabledMessage) || loading} aria-describedby='map-narrator-status'>
         {loading ? operationStatus ?? 'Analizando mapa…' : narrationMode === 'visual' ? 'Describir visualmente el mapa' : 'Describir metadatos del mapa'}
       </Button>
-      {narrationMode === 'visual' && <p className='text-muted mt-2 mb-0'>Se enviará una captura de la vista actual para generar la descripción; no se guarda.</p>}
+      <Button className='mt-2 align-self-start' type='tertiary' disabled={diagnostics.length === 0} onClick={() => {
+        if (!openDiagnosticWindow(diagnostics)) setError('El navegador bloqueó la ventana de diagnóstico. Permite las ventanas emergentes e inténtalo de nuevo.')
+      }}>
+        Abrir registro de diagnóstico ({diagnostics.length})
+      </Button>
+      {narrationMode === 'visual' && <p className='text-muted mt-2 mb-0'>La captura se procesa para generar la descripción y no se guarda en el widget. El registro solo conserva tamaño y dimensiones, nunca los bytes de la imagen.</p>}
       <div id='map-narrator-status' className='mt-3' role='status' aria-live='polite'>
         {disabledMessage ?? operationStatus ?? ''}
       </div>
