@@ -55,14 +55,23 @@ function createServer ({
   maxRequestsPerWindow = 20,
   rateWindowMs = 60 * 1000,
   rateCounters = new Map(),
-  allowedOrigin
+  allowedOrigin,
+  forensics = () => {}
 }) {
   if (typeof describeMap !== 'function') throw new TypeError('describeMap must be a function')
 
   return http.createServer(async (request, response) => {
+    const requestId = crypto.randomUUID()
+    const startedAt = now()
+    response.setHeader('x-request-id', requestId)
+    const finish = (status, body, { stage, code, cached, visual } = {}) => {
+      const diagnostic = { requestId, stage, ...(code ? { code } : {}) }
+      forensics({ timestamp: new Date(startedAt).toISOString(), requestId, stage, status, ...(code ? { code } : {}), ...(typeof cached === 'boolean' ? { cached } : {}), ...(typeof visual === 'boolean' ? { visual } : {}), durationMs: Math.max(0, now() - startedAt) })
+      return sendJson(response, status, { ...body, diagnostic })
+    }
     const origin = request.headers.origin
     if (allowedOrigin && request.url === '/api/map-description' && origin !== allowedOrigin) {
-      return sendJson(response, 403, { error: { code: 'ORIGIN_FORBIDDEN', message: 'Request origin is not allowed' } })
+      return finish(403, { error: { code: 'ORIGIN_FORBIDDEN', message: 'Request origin is not allowed' } }, { stage: 'authorization', code: 'ORIGIN_FORBIDDEN' })
     }
     if (allowedOrigin && origin === allowedOrigin) {
       response.setHeader('access-control-allow-origin', allowedOrigin)
@@ -90,7 +99,7 @@ function createServer ({
     activeCounter.count += 1
     rateCounters.set(caller, activeCounter)
     if (activeCounter.count > maxRequestsPerWindow) {
-      return sendJson(response, 429, { error: { code: 'RATE_LIMITED', message: 'Too many narration requests' } })
+      return finish(429, { error: { code: 'RATE_LIMITED', message: 'Too many narration requests' } }, { stage: 'rate-limit', code: 'RATE_LIMITED' })
     }
 
     try {
@@ -120,19 +129,20 @@ function createServer ({
         const key = cacheKey(normalizedRequest)
         const cached = cache.get(key)
         if (cached && cached.expiresAt > now()) {
-          return sendJson(response, 200, { description: cached.description, cached: true })
+          return finish(200, { description: cached.description, cached: true }, { stage: 'cache', cached: true, visual: false })
         }
         const description = await describeMap(normalizedRequest)
         cache.set(key, { description, expiresAt: now() + CACHE_TTL_MS })
-        return sendJson(response, 200, { description, cached: false })
+        return finish(200, { description, cached: false }, { stage: 'completed', cached: false, visual: false })
       }
 
       const description = await describeMap(normalizedRequest)
-      return sendJson(response, 200, { description, cached: false })
+      return finish(200, { description, cached: false }, { stage: 'completed', cached: false, visual: true })
     } catch (error) {
       const status = error.status ?? 502
       const code = error.code ?? 'UPSTREAM_ERROR'
-      return sendJson(response, status, { error: { code, message: status === 502 ? 'Description service unavailable' : error.message } })
+      const stage = status === 400 ? 'validation' : 'upstream'
+      return finish(status, { error: { code, message: status === 502 ? 'Description service unavailable' : error.message } }, { stage, code })
     }
   })
 }

@@ -58,11 +58,11 @@ export default function Widget (props: AllWidgetProps<Config>) {
       const payload = await response.json()
       if (!response.ok) {
         const message = payload?.error?.message ?? 'No se pudo generar la descripción.'
-        setDiagnostics(entries => [...entries, createDiagnosticEntry({ mode: narrationMode, apiUrl, context, visual, locale, style, status: response.status, response: payload?.error, durationMs: Date.now() - startedAt })].slice(-20))
+        setDiagnostics(entries => [...entries, createDiagnosticEntry({ mode: narrationMode, apiUrl, context, visual, locale, style, status: response.status, response: { error: payload?.error, diagnostic: payload?.diagnostic }, durationMs: Date.now() - startedAt })].slice(-20))
         setError(message)
         return
       }
-      setDiagnostics(entries => [...entries, createDiagnosticEntry({ mode: narrationMode, apiUrl, context, visual, locale, style, status: response.status, response: { description: payload.description }, durationMs: Date.now() - startedAt })].slice(-20))
+      setDiagnostics(entries => [...entries, createDiagnosticEntry({ mode: narrationMode, apiUrl, context, visual, locale, style, status: response.status, response: { description: payload.description, diagnostic: payload.diagnostic }, durationMs: Date.now() - startedAt })].slice(-20))
       setDescription(payload.description)
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : 'No se pudo generar la descripción.'

@@ -131,6 +131,30 @@ test('rate-limits a caller before forwarding a second request', async (t) => {
   assert.equal(second.body.error.code, 'RATE_LIMITED')
 })
 
+
+test('emits a sanitized forensic event with request correlation for upstream failures', async (t) => {
+  const events = []
+  const upstreamError = Object.assign(new Error('OpenAI Responses API request failed'), { status: 502, code: 'OPENAI_401' })
+  const server = createServer({
+    forensics: (event) => events.push(event),
+    describeMap: async () => { throw upstreamError }
+  })
+  server.listen(0, '127.0.0.1')
+  await once(server, 'listening')
+  t.after(() => server.close())
+
+  const response = await request(server, { context: validContext })
+
+  assert.equal(response.status, 502)
+  assert.equal(response.body.error.code, 'OPENAI_401')
+  assert.equal(response.body.diagnostic.stage, 'upstream')
+  assert.match(response.body.diagnostic.requestId, /^[0-9a-f-]{36}$/)
+  assert.deepEqual(events.length, 1)
+  assert.equal(events[0].requestId, response.body.diagnostic.requestId)
+  assert.equal(events[0].code, 'OPENAI_401')
+  assert.doesNotMatch(JSON.stringify(events), /Movilidad urbana|Carriles bici|OPENAI_API_KEY/)
+})
+
 test('rejects malformed map metadata before calling the model', async (t) => {
   let called = false
   const server = createServer({ describeMap: async () => { called = true } })

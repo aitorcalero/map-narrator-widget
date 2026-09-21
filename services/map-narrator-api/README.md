@@ -21,7 +21,21 @@ curl http://127.0.0.1:8787/healthz
 
 Expected health response: `{"status":"ok"}`.
 
-The widget must be configured with the deployed HTTPS endpoint ending in `/api/map-description`. It sends only bounded map metadata: map title, extent, scale, basemap, and up to twelve layer metadata records. It never sends features, attributes, geometries, or screenshots.
+The widget must be configured with the deployed HTTPS endpoint ending in `/api/map-description`. It sends only bounded map metadata: map title, extent, scale, basemap, and up to twelve layer metadata records. Visual mode additionally sends an explicit user-requested screenshot. It never sends features, attributes, geometries, or browser credentials.
+
+## Forensic diagnostics
+
+Each narration response carries an `x-request-id` header and a sanitized `diagnostic` object. The widget's diagnostic window displays that ID, HTTP status, processing stage, and error code so a failed browser request can be correlated with the API event.
+
+The API appends one sanitized JSON record per request to `logs/forensics.jsonl` (owner-only permissions, not committed). It includes timestamp, request ID, stage (`authorization`, `rate-limit`, `validation`, `cache`, `upstream`, or `completed`), status, sanitized code, cache state, visual-mode flag, and duration. It intentionally excludes API keys, authorization headers, map context, prompts, screenshots, base64 data, and model output. The current file is capped at 1 MiB and retains one previous rotation (`forensics.jsonl.1`).
+
+To inspect failures while testing locally:
+
+```sh
+tail -f logs/forensics.jsonl
+```
+
+Set `MAP_NARRATOR_FORENSICS_LOG` to an absolute path only when the runtime needs a different secure log location.
 
 ## Production prerequisites
 
