@@ -65,7 +65,7 @@ test('sends text and an image input for visual narration', async () => {
   assert.equal(sent.input[0].content[1].type, 'input_image')
   assert.equal(sent.input[0].content[1].image_url, 'data:image/png;base64,iVBORw0KGgo=')
   assert.equal(sent.input[0].content[1].detail, 'high')
-  assert.equal(sent.max_output_tokens, 900)
+  assert.equal(sent.max_output_tokens, 2400)
 })
 
 test('exposes an upstream HTTP status without exposing OpenAI response details', async () => {

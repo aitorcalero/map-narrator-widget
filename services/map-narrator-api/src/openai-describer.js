@@ -66,7 +66,7 @@ function createOpenAIDescriber({ apiKey, model = 'gpt-5-mini', fetchImpl = globa
       body: JSON.stringify({
         model,
         reasoning: { effort: 'minimal' },
-        max_output_tokens: request.visual ? 900 : 600,
+        max_output_tokens: request.visual ? 2400 : 600,
         input: buildResponseInput(request),
         text: {
           format: { type: 'json_schema', name: request.visual ? 'visual_map_description' : 'map_description', strict: true, schema: request.visual ? VISUAL_DESCRIPTION_SCHEMA : DESCRIPTION_SCHEMA }

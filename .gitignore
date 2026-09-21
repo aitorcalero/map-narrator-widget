@@ -1,0 +1,60 @@
+# Dependencias
+node_modules/
+*/node_modules/
+
+# Build output
+client/dist/
+client/dist-download/
+client/dist-report/
+*/dist/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Credenciales y secrets
+.env
+.env.*
+!.env.example
+*.env
+# No subir claves de API o secrets en ningún formato
+**/backend.env
+
+# Archivos temporales y build
+*.tmp
+*.lock
+pnpm-lock.yaml
+package-lock.json
+
+# Archivos de servicio de map-narrator-api
+services/map-narrator-api/node
+services/map-narrator-api/map-narrator-api@1.0.0
+
+# VS Code, IDE, etc
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Archivos no esenciales
+3rd-party-license.txt
+INSTALL-NOTES.md
+downloads/
+readme.txt
+setting.json
+version.json
+
+# Archivos del sistema
+.client/
+.eslintcache
+.jest-cache/
+
+# Configuración local
+client/.npmrc
