@@ -96,28 +96,36 @@ export MAP_NARRATOR_FORENSICS_LOG="/ruta/segura/forensics.jsonl"
 
 ### 2. Almacenamiento seguro de la clave
 
-El proyecto incluye un script para guardar la clave de forma segura (solo la tienes que pegar una vez y el script la valida):
+El proyecto incluye scripts que guardan la clave fuera del repositorio y la validan:
 
-```sh
+```bash
 bash scripts/save-api-key.sh
 ```
 
-Esto guarda la clave en `~/.config/map-narrator/backend.env` con permisos 600.
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\save-api-key.ps1
+```
+
+En Linux/macOS se guarda en `~/.config/map-narrator/backend.env` con permisos 600. En Windows se guarda en `%LOCALAPPDATA%\map-narrator\backend.env` y se restringe al usuario actual.
 
 ### 3. Arranque de todos los servicios
 
-El script `scripts/start-all.sh` arranca todo automáticamente:
+Experience Builder no forma parte de este repositorio. Indica su directorio raíz mediante `EXPERIENCE_BUILDER_ROOT`; el script usa rutas relativas para el backend de este repositorio.
 
-```sh
+```bash
+export EXPERIENCE_BUILDER_ROOT="$HOME/work/arcgis-experience-builder"
+export MAP_NARRATOR_ALLOWED_ORIGIN="http://localhost:3001" # opcional; este es el valor predeterminado
 bash scripts/start-all.sh
 ```
 
-Este script:
-- Lee la clave del archivo de credenciales o de la variable de entorno
-- Detiene procesos anteriores
-- Arranca el backend API en el puerto 8787
-- Arranca Experience Builder en los puertos 3000/3001
-- Verifica que todo está funcionando
+```powershell
+$env:EXPERIENCE_BUILDER_ROOT = 'C:\work\arcgis-experience-builder'
+powershell -ExecutionPolicy Bypass -File .\scripts\start-all.ps1
+```
+
+En Windows, el script comprueba que Tailscale esté instalado y conectado; si está desconectado ejecuta `tailscale up`, y después publica el servidor HTTP local de Experience Builder (puerto 3000) en HTTPS 443 y la API en HTTPS 8443. También arranca el watcher del cliente para compilar los widgets personalizados. La URL permitida de CORS se deriva automáticamente del DNS de Tailscale. Si no quieres usar Tailscale, añade `-SkipTailscale` y configura opcionalmente `MAP_NARRATOR_ALLOWED_ORIGIN`.
+
+Los scripts leen la clave almacenada o `OPENAI_API_KEY`, inician el backend en el puerto 8787 y Experience Builder, y devuelven error si alguno no queda disponible. Los registros se guardan en `/tmp/map-narrator` en Linux/macOS y `%TEMP%\map-narrator` en Windows. No finalizan procesos ajenos: libera manualmente un puerto ocupado antes de iniciar.
 
 ### 4. Tailscale (recomendado para desarrollo local)
 
@@ -228,6 +236,12 @@ Si usas `https://127.0.0.1:3001` y ves errores de Service Worker SSL:
 
 ## Licencia
 
-Copyright © Aitor Calero García
+Copyright © 2026 Aitor Calero García
 
-Este proyecto está licenciado bajo los términos especificados en el archivo LICENSE.
+Este proyecto está licenciado bajo los términos de la licencia MIT. La licencia
+permite usar, modificar y redistribuir el proyecto, manteniendo esta atribución.
+
+## TODO
+
+- [ ] Conectar con ElevenLabs para que lea la descripción.
+- [ ] Añadir una barra de progreso mientras se realiza la petición a OpenAI.
