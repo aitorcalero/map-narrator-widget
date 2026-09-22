@@ -236,6 +236,12 @@ Si usas `https://127.0.0.1:3001` y ves errores de Service Worker SSL:
 
 ## Licencia
 
-Copyright © Aitor Calero García
+Copyright © 2026 Aitor Calero García
 
-Este proyecto está licenciado bajo los términos especificados en el archivo LICENSE.
+Este proyecto está licenciado bajo los términos de la licencia MIT. La licencia
+permite usar, modificar y redistribuir el proyecto, manteniendo esta atribución.
+
+## TODO
+
+- [ ] Conectar con ElevenLabs para que lea la descripción.
+- [ ] Añadir una barra de progreso mientras se realiza la petición a OpenAI.
