@@ -118,6 +118,20 @@ powershell -ExecutionPolicy Bypass -File .\scripts\save-api-key.ps1
 
 En Linux/macOS se guarda en `~/.config/map-narrator/backend.env` con permisos 600. En Windows se guarda en `%LOCALAPPDATA%\map-narrator\backend.env` y se restringe al usuario actual.
 
+Para habilitar la lectura con ElevenLabs, ejecuta el asistente correspondiente. Conserva la clave de OpenAI existente y añade la configuración de voz al mismo archivo:
+
+```bash
+bash scripts/save-elevenlabs-config.sh
+```
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\save-elevenlabs-config.ps1
+```
+
+El asistente solicita la API key de ElevenLabs, el `voice_id` y el modelo
+(por defecto `eleven_multilingual_v2`). No muestra la API key mientras se
+escribe y no la guarda en el repositorio.
+
 ### 3. Arranque de todos los servicios
 
 Experience Builder no forma parte de este repositorio. Indica su directorio raíz mediante `EXPERIENCE_BUILDER_ROOT`; el script usa rutas relativas para el backend de este repositorio.

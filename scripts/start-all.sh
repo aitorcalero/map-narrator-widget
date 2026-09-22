@@ -27,9 +27,16 @@ wait_for_http() {
 }
 
 if [[ -z "${OPENAI_API_KEY:-}" && -f "$CREDENTIALS_FILE" ]]; then
-  export OPENAI_API_KEY
-  OPENAI_API_KEY="$(<"$CREDENTIALS_FILE")"
-  echo "Credenciales cargadas desde $CREDENTIALS_FILE"
+  if grep -q '^OPENAI_API_KEY=' "$CREDENTIALS_FILE"; then
+    set -a
+    # The file is created by the bundled credential scripts and is owner-only.
+    . "$CREDENTIALS_FILE"
+    set +a
+  else
+    export OPENAI_API_KEY
+    OPENAI_API_KEY="$(<"$CREDENTIALS_FILE")"
+  fi
+  echo "Configuración cargada desde $CREDENTIALS_FILE"
 fi
 
 if [[ -z "${OPENAI_API_KEY:-}" ]]; then

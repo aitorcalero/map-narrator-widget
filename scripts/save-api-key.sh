@@ -53,8 +53,16 @@ if echo "$KEY" | grep -qP '[\x00-\x1f\x7f]'; then
     exit 1
 fi
 
-# Guardar la clave
-echo "$KEY" > "$CREDENTIALS_FILE"
+# Guardar la clave sin sobrescribir la configuración opcional de ElevenLabs.
+TEMP_FILE=$(mktemp)
+if [ -f "$CREDENTIALS_FILE" ]; then
+    grep -v '^OPENAI_API_KEY=' "$CREDENTIALS_FILE" | grep -E '^[A-Za-z_][A-Za-z0-9_]*=' > "$TEMP_FILE" || true
+fi
+{
+    printf 'OPENAI_API_KEY=%s\n' "$KEY"
+    cat "$TEMP_FILE"
+} > "$CREDENTIALS_FILE"
+rm -f "$TEMP_FILE"
 chmod 600 "$CREDENTIALS_FILE"
 
 echo "Clave guardada correctamente en $CREDENTIALS_FILE"

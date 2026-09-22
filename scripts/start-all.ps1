@@ -83,9 +83,17 @@ function Configure-TailscaleServe {
   }
 }
 
-if (-not $env:OPENAI_API_KEY -and (Test-Path $credentialsFile)) {
-  $env:OPENAI_API_KEY = (Get-Content -Raw $credentialsFile).TrimEnd([char[]]"`r`n")
-  Write-Host "Credenciales cargadas desde $credentialsFile"
+if (Test-Path $credentialsFile) {
+  foreach ($line in Get-Content $credentialsFile) {
+    if ($line -match '^\s*([A-Za-z_][A-Za-z0-9_]*)=(.*)$') {
+      if (-not (Get-Item "Env:$($Matches[1])" -ErrorAction SilentlyContinue)) {
+        Set-Item "Env:$($Matches[1])" $Matches[2]
+      }
+    } elseif (-not $env:OPENAI_API_KEY -and -not [string]::IsNullOrWhiteSpace($line)) {
+      $env:OPENAI_API_KEY = $line.Trim()
+    }
+  }
+  Write-Host "Configuración cargada desde $credentialsFile"
 }
 if (-not $env:OPENAI_API_KEY) {
   throw 'Configura OPENAI_API_KEY o ejecuta .\scripts\save-api-key.ps1.'
