@@ -1,6 +1,6 @@
 # Map Narrator Widget
 
-Widget de ArcGIS Experience Builder que describe accesiblemente la vista visual real de un mapa para personas sin visión, mediante capturas controladas y OpenAI.
+Widget de ArcGIS Experience Builder que describe accesiblemente la vista visual real de un mapa para personas sin visión, mediante capturas controladas y OpenAI. Después de generar la descripción, el usuario puede pulsar **Leer descripción** para convertirla en audio con ElevenLabs y reproducirla desde el propio widget.
 
 ## Descripción
 
@@ -9,7 +9,7 @@ El widget genera descripciones accesibles del mapa visible (colores, símbolos, 
 - **Metadatos GIS** (extensión, escala, basemap, capas visibles)
 - **Captura visual opt-in** de la vista actual del mapa (JPEG comprimido)
 
-En modo visual, describe lo que una persona sin visión necesitaría para entender el mapa. El widget solo captura cuando el usuario pulsa el botón.
+En modo visual, describe lo que una persona sin visión necesitaría para entender el mapa. El widget solo captura cuando el usuario pulsa el botón. La lectura de audio es opcional y requiere configurar ElevenLabs en el backend; si no está configurado, la generación de texto sigue funcionando.
 
 ## Componentes necesarios
 
@@ -281,7 +281,10 @@ Copyright © 2026 Aitor Calero García
 Este proyecto está licenciado bajo los términos de la licencia MIT. La licencia
 permite usar, modificar y redistribuir el proyecto, manteniendo esta atribución.
 
-## TODO
+## Roadmap
 
-- [ ] [Conectar con ElevenLabs para que lea la descripción](https://github.com/aitorcalero/map-narrator-widget/issues/2).
+- [ ] [Añadir una barra de progreso mientras se realiza la petición a OpenAI](https://github.com/aitorcalero/map-narrator-widget/issues/2).
+- [ ] [Personalizar el prompt de descripción visual](https://github.com/aitorcalero/map-narrator-widget/issues/8).
+- [ ] [Generar un resumen breve y visual para ElevenLabs](https://github.com/aitorcalero/map-narrator-widget/issues/9).
+- [ ] [Mover el reproductor de audio al inicio y enfocar al terminar](https://github.com/aitorcalero/map-narrator-widget/issues/7).
 - [ ] [Añadir una barra de progreso mientras se realiza la petición a OpenAI](https://github.com/aitorcalero/map-narrator-widget/issues/3).
