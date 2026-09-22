@@ -8,6 +8,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $apiDirectory = Join-Path $repoRoot 'services\map-narrator-api'
+$widgetSource = Join-Path $repoRoot 'client\your-extensions\widgets\map-narrator'
 $credentialsFile = Join-Path $env:LOCALAPPDATA 'map-narrator\backend.env'
 $logDirectory = Join-Path $env:TEMP 'map-narrator'
 
@@ -139,6 +140,13 @@ Assert-CommandAvailable 'node.exe'
 Assert-CommandAvailable 'npm.cmd'
 Assert-CommandAvailable 'pnpm.cmd'
 $ExperienceBuilderRoot = Resolve-ExperienceBuilderRoot -ConfiguredRoot $ExperienceBuilderRoot
+$widgetTarget = Join-Path $ExperienceBuilderRoot 'client\your-extensions\widgets\map-narrator'
+if (-not (Test-Path (Join-Path $widgetSource 'manifest.json'))) {
+  throw "No se encontró el widget fuente en '$widgetSource'."
+}
+New-Item -ItemType Directory -Force -Path $widgetTarget | Out-Null
+Copy-Item -Path (Join-Path $widgetSource '*') -Destination $widgetTarget -Recurse -Force
+Write-Host "Widget sincronizado en $widgetTarget"
 
 New-Item -ItemType Directory -Force -Path $logDirectory | Out-Null
 $apiOutput = Join-Path $logDirectory 'api.out.log'

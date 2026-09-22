@@ -4,6 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 API_DIR="$REPO_ROOT/services/map-narrator-api"
+WIDGET_SOURCE="$REPO_ROOT/client/your-extensions/widgets/map-narrator"
 CREDENTIALS_FILE="$HOME/.config/map-narrator/backend.env"
 EXPERIENCE_BUILDER_ROOT="${EXPERIENCE_BUILDER_ROOT:-}"
 ALLOWED_ORIGIN="${MAP_NARRATOR_ALLOWED_ORIGIN:-http://localhost:3001}"
@@ -48,6 +49,15 @@ if [[ -z "$EXPERIENCE_BUILDER_ROOT" || ! -d "$EXPERIENCE_BUILDER_ROOT/server" ]]
   echo "ERROR: define EXPERIENCE_BUILDER_ROOT con el directorio de ArcGIS Experience Builder." >&2
   exit 1
 fi
+
+WIDGET_TARGET="$EXPERIENCE_BUILDER_ROOT/client/your-extensions/widgets/map-narrator"
+if [[ ! -f "$WIDGET_SOURCE/manifest.json" ]]; then
+  echo "ERROR: no se encontró el widget fuente en $WIDGET_SOURCE." >&2
+  exit 1
+fi
+mkdir -p "$WIDGET_TARGET"
+cp -R "$WIDGET_SOURCE"/. "$WIDGET_TARGET"/
+echo "Widget sincronizado en $WIDGET_TARGET"
 
 mkdir -p "$LOG_DIR"
 echo "=== Map Narrator - Arranque completo ==="
