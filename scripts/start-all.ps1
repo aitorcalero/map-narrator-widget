@@ -2,7 +2,9 @@
 param(
   [string]$ExperienceBuilderRoot = $env:EXPERIENCE_BUILDER_ROOT,
   [string]$AllowedOrigin = $env:MAP_NARRATOR_ALLOWED_ORIGIN,
-  [switch]$SkipTailscale
+  [switch]$SkipTailscale,
+  [switch]$Funnel,
+  [switch]$NoFunnel
 )
 
 $ErrorActionPreference = 'Stop'
@@ -140,23 +142,39 @@ function Stop-ProcessesOnPorts {
   Start-Sleep -Seconds 2
 }
 
-function Configure-TailscaleServe {
-  param([string]$DnsName)
+function Configure-TailscaleExposure {
+  param([string]$DnsName, [switch]$UseFunnel)
 
-  Write-Host 'Configurando Tailscale Serve...'
-  & tailscale.exe serve --https=443 --bg http://127.0.0.1:3000
+  $command = if ($UseFunnel) { 'funnel' } else { 'serve' }
+  Write-Host "Configurando Tailscale $command..."
+  & tailscale.exe $command --https=443 --bg http://127.0.0.1:3000
   if ($LASTEXITCODE -ne 0) {
-    throw 'No se pudo publicar Experience Builder con Tailscale Serve.'
+    throw "No se pudo publicar Experience Builder con Tailscale $command."
   }
-  & tailscale.exe serve --https=8443 --bg http://127.0.0.1:8787
+  & tailscale.exe $command --https=8443 --bg http://127.0.0.1:8787
   if ($LASTEXITCODE -ne 0) {
-    throw 'No se pudo publicar la API con Tailscale Serve.'
+    throw "No se pudo publicar la API con Tailscale $command."
   }
 
   return @{
     AppUrl = "https://$DnsName"
     ApiUrl = "https://$DnsName`:8443/api/map-description"
   }
+}
+
+function Resolve-FunnelChoice {
+  param([switch]$Enable, [switch]$Disable)
+
+  if ($Enable -and $Disable) {
+    throw 'No puedes usar -Funnel y -NoFunnel al mismo tiempo.'
+  }
+  if ($Enable) { return $true }
+  if ($Disable) { return $false }
+
+  do {
+    $answer = (Read-Host '¿Quieres activar Tailscale Funnel para acceso público? (S/N)').Trim().ToLowerInvariant()
+  } while ($answer -notin @('s', 'si', 'sí', 'n', 'no'))
+  return $answer -in @('s', 'si', 'sí')
 }
 
 if (Test-Path $credentialsFile) {
@@ -205,6 +223,7 @@ if ($SkipTailscale) {
   }
 } else {
   $tailscaleDnsName = Get-TailscaleDnsName
+  $funnelEnabled = Resolve-FunnelChoice -Enable:$Funnel -Disable:$NoFunnel
   $publicUrls = @{
     AppUrl = "https://$tailscaleDnsName"
     ApiUrl = "https://$tailscaleDnsName`:8443/api/map-description"
@@ -238,7 +257,7 @@ try {
   Write-Host "  Experience Builder PID: $($builderProcess.Id)"
   Wait-ForHttp -Uri 'http://127.0.0.1:3000' -Name 'Experience Builder' -Attempts 60 -Process $builderProcess -ErrorLog $builderError
   if (-not $SkipTailscale) {
-    $publicUrls = Configure-TailscaleServe -DnsName $tailscaleDnsName
+    $publicUrls = Configure-TailscaleExposure -DnsName $tailscaleDnsName -UseFunnel:$funnelEnabled
     Wait-ForHttp -Uri $publicUrls.AppUrl -Name 'Experience Builder via Tailscale' -Attempts 30 -Process $builderProcess -ErrorLog $builderError
   }
 } catch {
@@ -252,4 +271,7 @@ Write-Host ''
 Write-Host '=== Listo ==='
 Write-Host "App: $($publicUrls.AppUrl)"
 Write-Host "API: $($publicUrls.ApiUrl)"
+if (-not $SkipTailscale) {
+  Write-Host "Acceso público (Funnel): $funnelEnabled"
+}
 Write-Host "Logs: $logDirectory"

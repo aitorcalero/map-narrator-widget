@@ -147,7 +147,17 @@ $env:EXPERIENCE_BUILDER_ROOT = 'C:\work\arcgis-experience-builder'
 powershell -ExecutionPolicy Bypass -File .\scripts\start-all.ps1
 ```
 
-En Windows, el script comprueba que Tailscale esté instalado y conectado; si está desconectado ejecuta `tailscale up`, y después publica el servidor HTTP local de Experience Builder (puerto 3000) en HTTPS 443 y la API en HTTPS 8443. También arranca el watcher del cliente para compilar los widgets personalizados. La URL permitida de CORS se deriva automáticamente del DNS de Tailscale. Si no quieres usar Tailscale, añade `-SkipTailscale` y configura opcionalmente `MAP_NARRATOR_ALLOWED_ORIGIN`.
+En Windows, el script comprueba que Tailscale esté instalado y conectado; si está desconectado ejecuta `tailscale up`, y pregunta si quieres activar **Funnel** (acceso público) o mantener **Serve** (solo dispositivos de tu tailnet). Después publica Experience Builder en HTTPS 443 y la API en HTTPS 8443. También arranca el watcher del cliente para compilar los widgets personalizados. La URL permitida de CORS se deriva automáticamente del DNS de Tailscale. Si no quieres usar Tailscale, añade `-SkipTailscale` y configura opcionalmente `MAP_NARRATOR_ALLOWED_ORIGIN`.
+
+Para ejecuciones automatizadas puedes evitar la pregunta:
+
+```powershell
+# Público en Internet mediante Tailscale Funnel
+powershell -ExecutionPolicy Bypass -File .\scripts\start-all.ps1 -Funnel
+
+# Privado, solo dentro de la tailnet
+powershell -ExecutionPolicy Bypass -File .\scripts\start-all.ps1 -NoFunnel
+```
 
 Los scripts leen la clave almacenada o `OPENAI_API_KEY`, inician el backend en el puerto 8787 y Experience Builder, y devuelven error si alguno no queda disponible. Los registros se guardan en `/tmp/map-narrator` en Linux/macOS y `%TEMP%\map-narrator` en Windows. No finalizan procesos ajenos: libera manualmente un puerto ocupado antes de iniciar.
 
