@@ -3,12 +3,17 @@ const http = require('node:http')
 const { normalizeMapContext } = require('./map-context')
 const { normalizeVisualRequest } = require('./visual-request')
 
-const MAX_BODY_BYTES = 2 * 1024 * 1024
+const MAX_BODY_BYTES = 6 * 1024 * 1024
 const CACHE_TTL_MS = 5 * 60 * 1000
 
 function sendJson(response, status, body) {
   response.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
   response.end(JSON.stringify(body))
+}
+
+function sendAudio(response, status, audio, contentType) {
+  response.writeHead(status, { 'content-type': contentType, 'cache-control': 'no-store' })
+  response.end(audio)
 }
 
 function readJson(request) {
@@ -50,6 +55,7 @@ function cacheKey(request) {
 
 function createServer ({
   describeMap,
+  synthesizeSpeech,
   now = () => Date.now(),
   cache = new Map(),
   maxRequestsPerWindow = 20,
@@ -70,7 +76,8 @@ function createServer ({
       return sendJson(response, status, { ...body, diagnostic })
     }
     const origin = request.headers.origin
-    if (allowedOrigin && request.url === '/api/map-description' && origin !== allowedOrigin) {
+    const isApiRoute = request.url === '/api/map-description' || request.url === '/api/speech'
+    if (allowedOrigin && isApiRoute && origin !== allowedOrigin) {
       return finish(403, { error: { code: 'ORIGIN_FORBIDDEN', message: 'Request origin is not allowed' } }, { stage: 'authorization', code: 'ORIGIN_FORBIDDEN' })
     }
     if (allowedOrigin && origin === allowedOrigin) {
@@ -79,12 +86,27 @@ function createServer ({
       response.setHeader('access-control-allow-methods', 'POST, OPTIONS')
       response.setHeader('access-control-allow-headers', 'content-type')
     }
-    if (request.method === 'OPTIONS' && request.url === '/api/map-description') {
+    if (request.method === 'OPTIONS' && isApiRoute) {
       response.writeHead(origin === allowedOrigin ? 204 : 403)
       return response.end()
     }
     if (request.method === 'GET' && request.url === '/healthz') {
       return sendJson(response, 200, { status: 'ok' })
+    }
+    if (request.method === 'POST' && request.url === '/api/speech') {
+      if (typeof synthesizeSpeech !== 'function') {
+        return finish(503, { error: { code: 'ELEVENLABS_NOT_CONFIGURED', message: 'Speech service is not configured' } }, { stage: 'authorization', code: 'ELEVENLABS_NOT_CONFIGURED' })
+      }
+      try {
+        const input = await readJson(request)
+        const text = typeof input.text === 'string' ? input.text : ''
+        const result = await synthesizeSpeech(text)
+        return sendAudio(response, 200, result.audio, result.contentType)
+      } catch (error) {
+        const status = error.status ?? 502
+        const code = error.code ?? 'UPSTREAM_ERROR'
+        return finish(status, { error: { code, message: status === 502 ? 'Speech service unavailable' : error.message } }, { stage: status === 400 ? 'validation' : 'upstream', code, upstreamRequestId: error.upstreamRequestId })
+      }
     }
     if (request.method !== 'POST' || request.url !== '/api/map-description') {
       return sendJson(response, 404, { error: { code: 'NOT_FOUND', message: 'Route not found' } })

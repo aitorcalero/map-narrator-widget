@@ -12,7 +12,7 @@ Expected result: all Node tests pass.
 
 ## Run locally
 
-Set `OPENAI_API_KEY` in your terminal or deployment secret manager (never in the widget, app item, source control, or chat), then:
+Set `OPENAI_API_KEY` in your terminal or deployment secret manager (never in the widget, app item, source control, or chat), then optionally configure `ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID`, and `ELEVENLABS_MODEL` to enable speech:
 
 ```sh
 OPENAI_API_KEY="$OPENAI_API_KEY" npm start
@@ -21,7 +21,11 @@ curl http://127.0.0.1:8787/healthz
 
 Expected health response: `{"status":"ok"}`.
 
-The widget must be configured with the deployed HTTPS endpoint ending in `/api/map-description`. It sends only bounded map metadata: map title, extent, scale, basemap, and up to twelve layer metadata records. Visual mode additionally sends an explicit user-requested screenshot. It never sends features, attributes, geometries, or browser credentials.
+The widget must be configured with the deployed HTTPS endpoint ending in `/api/map-description`. It sends only bounded map metadata: map title, extent, scale, basemap, and up to twelve layer metadata records. Visual mode additionally sends an explicit user-requested JPEG screenshot (quality 75) up to 4 MiB (the complete JSON request is capped at 6 MiB). It never sends features, attributes, geometries, or browser credentials.
+
+When ElevenLabs is configured, `POST /api/speech` accepts a bounded JSON body
+such as `{"text":"Descripción del mapa"}` and returns `audio/mpeg`. The API key
+and voice ID remain server-side; the widget only receives the generated audio.
 
 ## Forensic diagnostics
 

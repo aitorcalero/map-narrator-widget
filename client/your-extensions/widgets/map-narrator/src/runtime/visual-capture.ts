@@ -1,5 +1,5 @@
 const MAX_CAPTURE_DIMENSION = 1280
-const PNG_PREFIX = 'data:image/png;base64,'
+const JPEG_PREFIX = 'data:image/jpeg;base64,'
 
 export interface VisualCapture {
   enabled: true
@@ -16,9 +16,9 @@ export async function captureVisualMap (view: any): Promise<VisualCapture> {
   const scale = Math.min(1, MAX_CAPTURE_DIMENSION / Math.max(view.width, view.height))
   const width = Math.max(1, Math.round(view.width * scale))
   const height = Math.max(1, Math.round(view.height * scale))
-  const screenshot = await view.takeScreenshot({ format: 'png', width, height })
-  if (typeof screenshot?.dataUrl !== 'string' || !screenshot.dataUrl.startsWith(PNG_PREFIX)) {
-    throw new Error('Map screenshot is not PNG')
+  const screenshot = await view.takeScreenshot({ format: 'jpg', quality: 75, width, height })
+  if (typeof screenshot?.dataUrl !== 'string' || !screenshot.dataUrl.startsWith(JPEG_PREFIX)) {
+    throw new Error('Map screenshot is not JPEG')
   }
   return { enabled: true, imageDataUrl: screenshot.dataUrl, width, height }
 }

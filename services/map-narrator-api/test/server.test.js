@@ -5,21 +5,25 @@ const http = require('node:http')
 
 const { createServer } = require('../src/server')
 
-async function request(server, payload, extraHeaders = {}) {
+async function request(server, payload, extraHeaders = {}, path = '/api/map-description') {
   const address = server.address()
   return await new Promise((resolve, reject) => {
     const body = JSON.stringify(payload)
     const req = http.request({
       host: '127.0.0.1',
       port: address.port,
-      path: '/api/map-description',
+      path,
       method: 'POST',
       headers: { 'content-type': 'application/json', 'content-length': Buffer.byteLength(body), ...extraHeaders }
     }, (response) => {
       let text = ''
       response.setEncoding('utf8')
       response.on('data', (chunk) => { text += chunk })
-      response.on('end', () => resolve({ status: response.statusCode, headers: response.headers, body: JSON.parse(text) }))
+      response.on('end', () => resolve({
+        status: response.statusCode,
+        headers: response.headers,
+        body: response.headers['content-type']?.startsWith('application/json') ? JSON.parse(text) : Buffer.from(text)
+      }))
     })
     req.on('error', reject)
     req.end(body)
@@ -51,6 +55,33 @@ test('returns a structured description for valid normalized map metadata', async
   assert.equal(response.status, 200)
   assert.equal(response.body.cached, false)
   assert.equal(response.body.description.title, 'Movilidad urbana')
+})
+
+test('returns synthesized audio for a speech request', async (t) => {
+  const server = createServer({
+    synthesizeSpeech: async (text) => ({ audio: Buffer.from(text), contentType: 'audio/mpeg' }),
+    describeMap: async () => ({})
+  })
+  server.listen(0, '127.0.0.1')
+  await once(server, 'listening')
+  t.after(() => server.close())
+
+  const response = await request(server, { text: 'Descripción del mapa' }, {}, '/api/speech')
+
+  assert.equal(response.status, 200)
+  assert.equal(response.headers['content-type'], 'audio/mpeg')
+})
+
+test('reports when speech synthesis is not configured', async (t) => {
+  const server = createServer({ describeMap: async () => ({}) })
+  server.listen(0, '127.0.0.1')
+  await once(server, 'listening')
+  t.after(() => server.close())
+
+  const response = await request(server, { text: 'Descripción del mapa' }, {}, '/api/speech')
+
+  assert.equal(response.status, 503)
+  assert.equal(response.body.error.code, 'ELEVENLABS_NOT_CONFIGURED')
 })
 
 test('forwards validated visual input and never caches it', async (t) => {

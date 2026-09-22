@@ -7,7 +7,7 @@ Widget de ArcGIS Experience Builder que describe accesiblemente la vista visual 
 El widget genera descripciones accesibles del mapa visible (colores, símbolos, etiquetas, distribución espacial, patrones, leyendas), basadas en:
 
 - **Metadatos GIS** (extensión, escala, basemap, capas visibles)
-- **Captura visual opt-in** de la vista actual del mapa (PNG)
+- **Captura visual opt-in** de la vista actual del mapa (JPEG comprimido)
 
 En modo visual, describe lo que una persona sin visión necesitaría para entender el mapa. El widget solo captura cuando el usuario pulsa el botón.
 
@@ -19,7 +19,7 @@ En modo visual, describe lo que una persona sin visión necesitaría para entend
 - **Node.js 22 o superior** (la versión del contenedor es 22-alpine, pero local usa la versión del sistema)
 - **pnpm** (se usa en el proyecto)
 - **Tailscale** (recomendado para desarrollo local con HTTPS)
-- **Acceso a internet** (para las API de OpenAI y ArcGIS)
+- **Acceso a internet** (para las API de OpenAI, ElevenLabs y ArcGIS)
 
 ### Cuentas de terceros necesarias
 
@@ -32,10 +32,16 @@ En modo visual, describe lo que una persona sin visión necesitaría para entend
    - API key de tipo `sk-proj-` o `sk-svcacct-` (Project o Service Account)
    - Modelo: `gpt-5-mini` (o compatible)
 
+3. **ElevenLabs** — para leer en voz alta la descripción generada
+   - Cuenta en https://elevenlabs.io
+   - API key y un `voice_id`
+   - Modelo inicial: `eleven_multilingual_v2`
+
 ### Componentes de terceros integrados
 
 - **ArcGIS Maps SDK for JavaScript 5.1.24** (incluido en Experience Builder)
 - **OpenAI Responses API** (para generación de descripciones)
+- **ElevenLabs Text-to-Speech API** (opcional, para lectura de descripciones)
 - **Responsive layout** basado en Bootstrap/jimu-ui (del entorno de Experience Builder)
 
 ## Instalación
@@ -84,7 +90,11 @@ npm install
 
 El backend necesita:
 ```sh
-export OPENAI_API_KEY="***"  # o *** OPENAI_MODEL="gpt-5-mini"     # modelo por defecto
+export OPENAI_API_KEY="***"
+export OPENAI_MODEL="gpt-5-mini"     # modelo por defecto
+export ELEVENLABS_API_KEY="***"  # opcional
+export ELEVENLABS_VOICE_ID="tu_voice_id"  # necesario si se habilita ElevenLabs
+export ELEVENLABS_MODEL="eleven_multilingual_v2"
 export MAP_NARRATOR_ALLOWED_ORIGIN="https://tu-dominio-experience-builder"  # origen permitido
 export PORT=8787
 ```
@@ -107,6 +117,20 @@ powershell -ExecutionPolicy Bypass -File .\scripts\save-api-key.ps1
 ```
 
 En Linux/macOS se guarda en `~/.config/map-narrator/backend.env` con permisos 600. En Windows se guarda en `%LOCALAPPDATA%\map-narrator\backend.env` y se restringe al usuario actual.
+
+Para habilitar la lectura con ElevenLabs, ejecuta el asistente correspondiente. Conserva la clave de OpenAI existente y añade la configuración de voz al mismo archivo:
+
+```bash
+bash scripts/save-elevenlabs-config.sh
+```
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\save-elevenlabs-config.ps1
+```
+
+El asistente solicita la API key de ElevenLabs, el `voice_id` y el modelo
+(por defecto `eleven_multilingual_v2`). No muestra la API key mientras se
+escribe y no la guarda en el repositorio.
 
 ### 3. Arranque de todos los servicios
 
@@ -143,12 +167,18 @@ Luego accede a:
 - Experience Builder: `https://tu-host.taild71000.ts.net`
 - Backend API: `https://tu-host.taild71000.ts.net:8443/api/map-description`
 
+La lectura en voz alta usa el mismo host de la API, cambiando la ruta a
+`/api/speech`. Si no se configuran `ELEVENLABS_API_KEY` y
+`ELEVENLABS_VOICE_ID`, la generación de descripciones sigue funcionando y el
+botón de lectura informa de que el servicio no está configurado.
+
 ## Configuración del widget en Experience Builder
 
 1. Abre tu app en Experience Builder
 2. Añade el widget "Map Narrator" al lienzo
 3. Configura:
    - **API URL**: `https://tu-dominio/api/map-description` (o la URL de Tailscale)
+   - Después de generar una descripción, pulsa **Leer descripción** para solicitar el audio a ElevenLabs.
    - **Map widget**: selecciona el widget de mapa que quieres describir
    - **Visual mode** (opcional): activa si quieres que capture y describa la vista visual
 
