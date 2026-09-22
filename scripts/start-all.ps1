@@ -17,7 +17,7 @@ function Wait-ForHttp {
   for ($attempt = 1; $attempt -le $Attempts; $attempt++) {
     if ($Process.HasExited) {
       $details = if (Test-Path $ErrorLog) { Get-Content -Raw $ErrorLog } else { '' }
-      throw "$Name terminó antes de estar listo. $details"
+      throw "$Name termino antes de estar listo. $details"
     }
     try {
       Invoke-WebRequest -Uri $Uri -TimeoutSec 2 -UseBasicParsing | Out-Null
@@ -28,12 +28,12 @@ function Wait-ForHttp {
     }
   }
 
-  throw "$Name no respondió en $Uri tras $Attempts segundos. Consulta $ErrorLog."
+  throw "$Name no respondio en $Uri tras $Attempts segundos. Consulta $ErrorLog."
 }
 
 function Get-TailscaleDnsName {
   if (-not (Get-Command tailscale.exe -ErrorAction SilentlyContinue)) {
-    throw 'Tailscale no está instalado o tailscale.exe no está disponible en PATH.'
+    throw 'Tailscale no esta instalado o tailscale.exe no esta disponible en PATH.'
   }
 
   $statusJson = (& tailscale.exe status --json 2>&1 | Out-String)
@@ -44,11 +44,11 @@ function Get-TailscaleDnsName {
   try {
     $status = $statusJson | ConvertFrom-Json
   } catch {
-    throw "Tailscale devolvió una respuesta no válida: $statusJson"
+    throw "Tailscale devolvio una respuesta no valida: $statusJson"
   }
 
   if ($status.BackendState -ne 'Running') {
-    Write-Host "Tailscale está '$($status.BackendState)'. Activando la conexión..."
+    Write-Host "Tailscale esta '$($status.BackendState)'. Activando la conexion..."
     & tailscale.exe up
     if ($LASTEXITCODE -ne 0) {
       throw 'No se pudo activar Tailscale. Ejecuta "tailscale up" manualmente y vuelve a intentarlo.'
@@ -58,10 +58,47 @@ function Get-TailscaleDnsName {
   }
 
   if ($status.BackendState -ne 'Running' -or [string]::IsNullOrWhiteSpace($status.Self.DNSName)) {
-    throw 'Tailscale no está conectado o no tiene un nombre DNS disponible.'
+    throw 'Tailscale no esta conectado o no tiene un nombre DNS disponible.'
   }
 
   return $status.Self.DNSName.TrimEnd('.')
+}
+
+function Resolve-ExperienceBuilderRoot {
+  param([string]$ConfiguredRoot)
+
+  $candidates = @(
+    $ConfiguredRoot,
+    (Join-Path $HOME 'arcgis-experience-builder-1.21'),
+    (Join-Path $HOME 'arcgis-experience-builder'),
+    (Join-Path $HOME 'Downloads\arcgis-experience-builder-1.21')
+  ) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique
+
+  foreach ($candidate in $candidates) {
+    $resolved = $candidate
+    if (Test-Path $candidate) {
+      $resolved = (Resolve-Path $candidate).Path
+      if ((Test-Path (Join-Path $resolved 'server')) -and (Test-Path (Join-Path $resolved 'client'))) {
+        return $resolved
+      }
+    }
+  }
+
+  if ($ConfiguredRoot) {
+    Write-Warning "EXPERIENCE_BUILDER_ROOT no apunta a una instalacion valida: '$ConfiguredRoot'."
+  }
+  $entered = Read-Host 'Indica la ruta de ArcGIS Experience Builder'
+  if (-not $entered -or -not (Test-Path (Join-Path $entered 'server')) -or -not (Test-Path (Join-Path $entered 'client'))) {
+    throw "No se encontro una instalacion valida de Experience Builder. Define EXPERIENCE_BUILDER_ROOT o usa -ExperienceBuilderRoot con una carpeta que contenga server y client."
+  }
+  return (Resolve-Path $entered).Path
+}
+
+function Assert-CommandAvailable {
+  param([string]$Name)
+  if (-not (Get-Command $Name -ErrorAction SilentlyContinue)) {
+    throw "$Name no esta disponible en PATH. Instala la dependencia y vuelve a intentarlo."
+  }
 }
 
 function Configure-TailscaleServe {
@@ -93,17 +130,15 @@ if (Test-Path $credentialsFile) {
       $env:OPENAI_API_KEY = $line.Trim()
     }
   }
-  Write-Host "Configuración cargada desde $credentialsFile"
+  Write-Host "Configuracion cargada desde $credentialsFile"
 }
 if (-not $env:OPENAI_API_KEY) {
   throw 'Configura OPENAI_API_KEY o ejecuta .\scripts\save-api-key.ps1.'
 }
-if (-not $ExperienceBuilderRoot) {
-  $ExperienceBuilderRoot = Read-Host 'Indica la ruta de ArcGIS Experience Builder'
-}
-if (-not $ExperienceBuilderRoot -or -not (Test-Path (Join-Path $ExperienceBuilderRoot 'server'))) {
-  throw "No se encontró la carpeta server en '$ExperienceBuilderRoot'. Define EXPERIENCE_BUILDER_ROOT o pasa -ExperienceBuilderRoot."
-}
+Assert-CommandAvailable 'node.exe'
+Assert-CommandAvailable 'npm.cmd'
+Assert-CommandAvailable 'pnpm.cmd'
+$ExperienceBuilderRoot = Resolve-ExperienceBuilderRoot -ConfiguredRoot $ExperienceBuilderRoot
 
 New-Item -ItemType Directory -Force -Path $logDirectory | Out-Null
 $apiOutput = Join-Path $logDirectory 'api.out.log'
@@ -149,7 +184,7 @@ try {
   Start-Sleep -Seconds 5
   if ($clientProcess.HasExited) {
     $details = if (Test-Path $clientError) { Get-Content -Raw $clientError } else { '' }
-    throw "Experience Builder client terminó antes de compilar. $details"
+    throw "Experience Builder client termino antes de compilar. $details"
   }
   Write-Host 'Arrancando Experience Builder...'
   $builderProcess = Start-Process -FilePath 'node.exe' -ArgumentList @('src/server', '--dev_edition', '--http_only') -WorkingDirectory (Join-Path $ExperienceBuilderRoot 'server') -RedirectStandardOutput $builderOutput -RedirectStandardError $builderError -PassThru
@@ -157,7 +192,7 @@ try {
   Wait-ForHttp -Uri 'http://127.0.0.1:3000' -Name 'Experience Builder' -Attempts 60 -Process $builderProcess -ErrorLog $builderError
   if (-not $SkipTailscale) {
     $publicUrls = Configure-TailscaleServe -DnsName $tailscaleDnsName
-    Wait-ForHttp -Uri $publicUrls.AppUrl -Name 'Experience Builder vía Tailscale' -Attempts 30 -Process $builderProcess -ErrorLog $builderError
+    Wait-ForHttp -Uri $publicUrls.AppUrl -Name 'Experience Builder via Tailscale' -Attempts 30 -Process $builderProcess -ErrorLog $builderError
   }
 } catch {
   if ($clientProcess -and -not $clientProcess.HasExited) { Stop-Process -Id $clientProcess.Id }
