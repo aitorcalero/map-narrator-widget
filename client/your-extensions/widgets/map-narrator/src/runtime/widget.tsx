@@ -54,6 +54,13 @@ export default function Widget (props: AllWidgetProps<Config>) {
 
   const onDescribe = async () => {
     if (!mapView?.view || !apiUrl) return
+    if (narrationMode === 'visual') {
+      setDescription(undefined)
+      setSpeechAudioUrl(previous => {
+        if (previous) URL.revokeObjectURL(previous)
+        return undefined
+      })
+    }
     const startedAt = Date.now()
     const context = buildMapContext(mapView.view)
     const locale = document.documentElement.lang || 'es'
