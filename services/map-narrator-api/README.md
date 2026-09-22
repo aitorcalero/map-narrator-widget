@@ -21,7 +21,7 @@ curl http://127.0.0.1:8787/healthz
 
 Expected health response: `{"status":"ok"}`.
 
-The widget must be configured with the deployed HTTPS endpoint ending in `/api/map-description`. It sends only bounded map metadata: map title, extent, scale, basemap, and up to twelve layer metadata records. Visual mode additionally sends an explicit user-requested PNG screenshot up to 4 MiB (the complete JSON request is capped at 6 MiB). It never sends features, attributes, geometries, or browser credentials.
+The widget must be configured with the deployed HTTPS endpoint ending in `/api/map-description`. It sends only bounded map metadata: map title, extent, scale, basemap, and up to twelve layer metadata records. Visual mode additionally sends an explicit user-requested JPEG screenshot (quality 75) up to 4 MiB (the complete JSON request is capped at 6 MiB). It never sends features, attributes, geometries, or browser credentials.
 
 When ElevenLabs is configured, `POST /api/speech` accepts a bounded JSON body
 such as `{"text":"Descripción del mapa"}` and returns `audio/mpeg`. The API key

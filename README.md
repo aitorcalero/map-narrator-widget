@@ -7,7 +7,7 @@ Widget de ArcGIS Experience Builder que describe accesiblemente la vista visual 
 El widget genera descripciones accesibles del mapa visible (colores, símbolos, etiquetas, distribución espacial, patrones, leyendas), basadas en:
 
 - **Metadatos GIS** (extensión, escala, basemap, capas visibles)
-- **Captura visual opt-in** de la vista actual del mapa (PNG)
+- **Captura visual opt-in** de la vista actual del mapa (JPEG comprimido)
 
 En modo visual, describe lo que una persona sin visión necesitaría para entender el mapa. El widget solo captura cuando el usuario pulsa el botón.
 
