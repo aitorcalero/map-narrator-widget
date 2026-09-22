@@ -4,7 +4,8 @@ param(
   [string]$AllowedOrigin = $env:MAP_NARRATOR_ALLOWED_ORIGIN,
   [switch]$SkipTailscale,
   [switch]$Funnel,
-  [switch]$NoFunnel
+  [switch]$NoFunnel,
+  [switch]$Stop
 )
 
 $ErrorActionPreference = 'Stop'
@@ -179,6 +180,13 @@ function Resolve-FunnelChoice {
   } while ($answer -notin @('s', 'si', 'sí', 'n', 'no'))
   return $answer -in @('s', 'si', 'sí')
 }
+
+if ($Stop) {
+  Stop-ProcessesOnPorts -Ports @(8787, 3000, 3001)
+  Write-Host 'Procesos de Map Narrator detenidos.'
+  exit 0
+}
+
 if (Test-Path $credentialsFile) {
   foreach ($line in Get-Content $credentialsFile) {
     if ($line -match '^\s*([A-Za-z_][A-Za-z0-9_]*)=(.*)$') {

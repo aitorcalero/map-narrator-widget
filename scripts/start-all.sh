@@ -10,6 +10,7 @@ EXPERIENCE_BUILDER_ROOT="${EXPERIENCE_BUILDER_ROOT:-}"
 ALLOWED_ORIGIN="${MAP_NARRATOR_ALLOWED_ORIGIN:-}"
 SKIP_TAILSCALE=false
 FUNNEL_MODE=""
+STOP_ONLY=false
 LOG_DIR="${TMPDIR:-/tmp}/map-narrator"
 
 usage() {
@@ -20,6 +21,7 @@ Uso: bash scripts/start-all.sh [opciones]
   --skip-tailscale                No publicar mediante Tailscale
   --funnel                        Activar Tailscale Funnel sin preguntar
   --no-funnel                     Usar Tailscale Serve sin preguntar
+  --stop                          Detener los procesos locales del proyecto
   -h, --help                      Mostrar esta ayuda
 EOF
 }
@@ -42,6 +44,7 @@ while (($#)); do
       FUNNEL_MODE=false
       shift
       ;;
+    --stop) STOP_ONLY=true; shift ;;
     -h|--help) usage; exit 0 ;;
     *) echo "ERROR: opción desconocida: $1" >&2; usage >&2; exit 2 ;;
   esac
@@ -143,6 +146,12 @@ stop_processes_on_ports() {
     fi
   done
 }
+
+if $STOP_ONLY; then
+  stop_processes_on_ports
+  echo "Procesos de Map Narrator detenidos."
+  exit 0
+fi
 
 get_tailscale_dns_name() {
   require_command tailscale

@@ -172,9 +172,14 @@ bash scripts/start-all.sh --funnel
 
 # Ejecutar sin Tailscale
 bash scripts/start-all.sh --skip-tailscale
+
+# Detener backend y Experience Builder del proyecto
+bash scripts/start-all.sh --stop
 ```
 
-En Windows se usan los equivalentes `-NoFunnel`, `-Funnel` y `-SkipTailscale`. Si no se indica una opción de Funnel, el script pregunta. La ruta de Experience Builder se puede proporcionar con `--experience-builder-root` o `-ExperienceBuilderRoot`; también se detectan las instalaciones habituales bajo el directorio personal.
+En Windows se usan los equivalentes `-NoFunnel`, `-Funnel`, `-SkipTailscale` y `-Stop`. Si no se indica una opción de Funnel, el script pregunta. La ruta de Experience Builder se puede proporcionar con `--experience-builder-root` o `-ExperienceBuilderRoot`; también se detectan las instalaciones habituales bajo el directorio personal.
+
+La opción de parada solo actúa sobre procesos que escuchan en los puertos de desarrollo del proyecto (`8787`, `3000` y `3001`). Si se había configurado Tailscale Serve o Funnel, puede ser necesario retirar también esa publicación con `tailscale serve reset` y, si la versión instalada lo admite, `tailscale funnel reset`.
 
 ### 4. Tailscale (recomendado para desarrollo local)
 
