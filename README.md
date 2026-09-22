@@ -243,5 +243,5 @@ permite usar, modificar y redistribuir el proyecto, manteniendo esta atribución
 
 ## TODO
 
-- [ ] Conectar con ElevenLabs para que lea la descripción.
-- [ ] Añadir una barra de progreso mientras se realiza la petición a OpenAI.
+- [ ] [Conectar con ElevenLabs para que lea la descripción](https://github.com/aitorcalero/map-narrator-widget/issues/2).
+- [ ] [Añadir una barra de progreso mientras se realiza la petición a OpenAI](https://github.com/aitorcalero/map-narrator-widget/issues/3).
