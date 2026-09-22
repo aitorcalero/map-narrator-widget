@@ -1,4 +1,4 @@
-const MAX_VISUAL_BYTES = 1_500_000
+const MAX_VISUAL_BYTES = 4 * 1024 * 1024
 const MAX_VISUAL_WIDTH = 1280
 const MAX_VISUAL_HEIGHT = 1280
 const PNG_DATA_URL_PREFIX = 'data:image/png;base64,'

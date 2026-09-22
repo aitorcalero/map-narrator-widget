@@ -3,7 +3,7 @@ const http = require('node:http')
 const { normalizeMapContext } = require('./map-context')
 const { normalizeVisualRequest } = require('./visual-request')
 
-const MAX_BODY_BYTES = 3 * 1024 * 1024
+const MAX_BODY_BYTES = 6 * 1024 * 1024
 const CACHE_TTL_MS = 5 * 60 * 1000
 
 function sendJson(response, status, body) {
