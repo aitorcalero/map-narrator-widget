@@ -1,6 +1,6 @@
 # Map Narrator Widget
 
-Widget de ArcGIS Experience Builder que describe accesiblemente la vista visual real de un mapa para personas sin visión, mediante capturas controladas y OpenAI.
+Widget de ArcGIS Experience Builder que describe accesiblemente la vista visual real de un mapa para personas sin visión, mediante capturas controladas y OpenAI. Después de generar la descripción, el usuario puede pulsar **Leer descripción** para convertirla en audio con ElevenLabs y reproducirla desde el propio widget.
 
 ## Descripción
 
@@ -9,7 +9,7 @@ El widget genera descripciones accesibles del mapa visible (colores, símbolos, 
 - **Metadatos GIS** (extensión, escala, basemap, capas visibles)
 - **Captura visual opt-in** de la vista actual del mapa (JPEG comprimido)
 
-En modo visual, describe lo que una persona sin visión necesitaría para entender el mapa. El widget solo captura cuando el usuario pulsa el botón.
+En modo visual, describe lo que una persona sin visión necesitaría para entender el mapa. El widget solo captura cuando el usuario pulsa el botón. La lectura de audio es opcional y requiere configurar ElevenLabs en el backend; si no está configurado, la generación de texto sigue funcionando.
 
 ## Componentes necesarios
 
@@ -147,7 +147,17 @@ $env:EXPERIENCE_BUILDER_ROOT = 'C:\work\arcgis-experience-builder'
 powershell -ExecutionPolicy Bypass -File .\scripts\start-all.ps1
 ```
 
-En Windows, el script comprueba que Tailscale esté instalado y conectado; si está desconectado ejecuta `tailscale up`, y después publica el servidor HTTP local de Experience Builder (puerto 3000) en HTTPS 443 y la API en HTTPS 8443. También arranca el watcher del cliente para compilar los widgets personalizados. La URL permitida de CORS se deriva automáticamente del DNS de Tailscale. Si no quieres usar Tailscale, añade `-SkipTailscale` y configura opcionalmente `MAP_NARRATOR_ALLOWED_ORIGIN`.
+En Windows, el script comprueba que Tailscale esté instalado y conectado; si está desconectado ejecuta `tailscale up`, y pregunta si quieres activar **Funnel** (acceso público) o mantener **Serve** (solo dispositivos de tu tailnet). Después publica Experience Builder en HTTPS 443 y la API en HTTPS 8443. También arranca el watcher del cliente para compilar los widgets personalizados. La URL permitida de CORS se deriva automáticamente del DNS de Tailscale. Si no quieres usar Tailscale, añade `-SkipTailscale` y configura opcionalmente `MAP_NARRATOR_ALLOWED_ORIGIN`.
+
+Para ejecuciones automatizadas puedes evitar la pregunta:
+
+```powershell
+# Público en Internet mediante Tailscale Funnel
+powershell -ExecutionPolicy Bypass -File .\scripts\start-all.ps1 -Funnel
+
+# Privado, solo dentro de la tailnet
+powershell -ExecutionPolicy Bypass -File .\scripts\start-all.ps1 -NoFunnel
+```
 
 Los scripts leen la clave almacenada o `OPENAI_API_KEY`, inician el backend en el puerto 8787 y Experience Builder, y devuelven error si alguno no queda disponible. Los registros se guardan en `/tmp/map-narrator` en Linux/macOS y `%TEMP%\map-narrator` en Windows. No finalizan procesos ajenos: libera manualmente un puerto ocupado antes de iniciar.
 
@@ -271,7 +281,9 @@ Copyright © 2026 Aitor Calero García
 Este proyecto está licenciado bajo los términos de la licencia MIT. La licencia
 permite usar, modificar y redistribuir el proyecto, manteniendo esta atribución.
 
-## TODO
+## Roadmap
 
-- [ ] [Conectar con ElevenLabs para que lea la descripción](https://github.com/aitorcalero/map-narrator-widget/issues/2).
-- [ ] [Añadir una barra de progreso mientras se realiza la petición a OpenAI](https://github.com/aitorcalero/map-narrator-widget/issues/3).
+- [ ] [Añadir una barra de progreso mientras se realiza la petición a OpenAI](https://github.com/aitorcalero/map-narrator-widget/issues/2).
+- [ ] [Personalizar el prompt de descripción visual](https://github.com/aitorcalero/map-narrator-widget/issues/8).
+- [ ] [Generar un resumen breve y visual para ElevenLabs](https://github.com/aitorcalero/map-narrator-widget/issues/9).
+- [ ] [Mover el reproductor de audio al inicio y enfocar al terminar](https://github.com/aitorcalero/map-narrator-widget/issues/7).

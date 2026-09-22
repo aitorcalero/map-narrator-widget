@@ -2,7 +2,9 @@
 param(
   [string]$ExperienceBuilderRoot = $env:EXPERIENCE_BUILDER_ROOT,
   [string]$AllowedOrigin = $env:MAP_NARRATOR_ALLOWED_ORIGIN,
-  [switch]$SkipTailscale
+  [switch]$SkipTailscale,
+  [switch]$Funnel,
+  [switch]$NoFunnel
 )
 
 $ErrorActionPreference = 'Stop'
@@ -143,14 +145,90 @@ function Stop-ProcessesOnPorts {
 function Configure-TailscaleServe {
   param([string]$DnsName)
 
-  Write-Host 'Configurando Tailscale Serve...'
-  & tailscale.exe serve --https=443 --bg http://127.0.0.1:3000
-  if ($LASTEXITCODE -ne 0) {
-    throw 'No se pudo publicar Experience Builder con Tailscale Serve.'
+  $candidates = @(
+    $ConfiguredRoot,
+    (Join-Path $HOME 'arcgis-experience-builder-1.21'),
+    (Join-Path $HOME 'arcgis-experience-builder'),
+    (Join-Path $HOME 'Downloads\arcgis-experience-builder-1.21')
+  ) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique
+
+  foreach ($candidate in $candidates) {
+    $resolved = $candidate
+    if (Test-Path $candidate) {
+      $resolved = (Resolve-Path $candidate).Path
+      if ((Test-Path (Join-Path $resolved 'server')) -and (Test-Path (Join-Path $resolved 'client'))) {
+        return $resolved
+      }
+    }
   }
-  & tailscale.exe serve --https=8443 --bg http://127.0.0.1:8787
+
+  if ($ConfiguredRoot) {
+    Write-Warning "EXPERIENCE_BUILDER_ROOT no apunta a una instalacion valida: '$ConfiguredRoot'."
+  }
+  $entered = Read-Host 'Indica la ruta de ArcGIS Experience Builder'
+  if (-not $entered -or -not (Test-Path (Join-Path $entered 'server')) -or -not (Test-Path (Join-Path $entered 'client'))) {
+    throw "No se encontro una instalacion valida de Experience Builder. Define EXPERIENCE_BUILDER_ROOT o usa -ExperienceBuilderRoot con una carpeta que contenga server y client."
+  }
+  return (Resolve-Path $entered).Path
+}
+
+function Assert-CommandAvailable {
+  param([string]$Name)
+  if (-not (Get-Command $Name -ErrorAction SilentlyContinue)) {
+    throw "$Name no esta disponible en PATH. Instala la dependencia y vuelve a intentarlo."
+  }
+}
+
+function Get-DescendantProcessIds {
+  param([int]$RootId)
+
+  $children = @(Get-CimInstance Win32_Process -Filter "ParentProcessId=$RootId" -ErrorAction SilentlyContinue)
+  $ids = @($children | ForEach-Object { $_.ProcessId })
+  foreach ($child in $ids) {
+    $ids += Get-DescendantProcessIds -RootId $child
+  }
+  return $ids
+}
+
+function Stop-ProcessesOnPorts {
+  param([int[]]$Ports)
+
+  $processIds = @(Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue |
+    Where-Object { $_.LocalPort -in $Ports } |
+    Select-Object -ExpandProperty OwningProcess -Unique)
+  if ($processIds.Count -eq 0) {
+    return
+  }
+
+  Write-Host "Deteniendo procesos anteriores en los puertos $($Ports -join ', ')..."
+  $allIds = @($processIds | ForEach-Object {
+    @($_) + @(Get-DescendantProcessIds -RootId $_)
+  } | Select-Object -Unique)
+  foreach ($processId in ($allIds | Sort-Object -Descending)) {
+    try {
+      Stop-Process -Id $processId -Force -ErrorAction Stop
+    } catch {
+      if ($_.Exception -is [System.ComponentModel.Win32Exception] -or $_.Exception.Message -match 'Access is denied|Acceso denegado') {
+        throw "No se pudo detener el proceso $processId. Ejecuta este script desde PowerShell como administrador."
+      }
+      throw
+    }
+  }
+  Start-Sleep -Seconds 2
+}
+
+function Configure-TailscaleExposure {
+  param([string]$DnsName, [switch]$UseFunnel)
+
+  $command = if ($UseFunnel) { 'funnel' } else { 'serve' }
+  Write-Host "Configurando Tailscale $command..."
+  & tailscale.exe $command --https=443 --bg http://127.0.0.1:3000
   if ($LASTEXITCODE -ne 0) {
-    throw 'No se pudo publicar la API con Tailscale Serve.'
+    throw "No se pudo publicar Experience Builder con Tailscale $command."
+  }
+  & tailscale.exe $command --https=8443 --bg http://127.0.0.1:8787
+  if ($LASTEXITCODE -ne 0) {
+    throw "No se pudo publicar la API con Tailscale $command."
   }
 
   return @{
@@ -159,6 +237,20 @@ function Configure-TailscaleServe {
   }
 }
 
+function Resolve-FunnelChoice {
+  param([switch]$Enable, [switch]$Disable)
+
+  if ($Enable -and $Disable) {
+    throw 'No puedes usar -Funnel y -NoFunnel al mismo tiempo.'
+  }
+  if ($Enable) { return $true }
+  if ($Disable) { return $false }
+
+  do {
+    $answer = (Read-Host '¿Quieres activar Tailscale Funnel para acceso público? (S/N)').Trim().ToLowerInvariant()
+  } while ($answer -notin @('s', 'si', 'sí', 'n', 'no'))
+  return $answer -in @('s', 'si', 'sí')
+}
 if (Test-Path $credentialsFile) {
   foreach ($line in Get-Content $credentialsFile) {
     if ($line -match '^\s*([A-Za-z_][A-Za-z0-9_]*)=(.*)$') {
@@ -205,6 +297,7 @@ if ($SkipTailscale) {
   }
 } else {
   $tailscaleDnsName = Get-TailscaleDnsName
+  $funnelEnabled = Resolve-FunnelChoice -Enable:$Funnel -Disable:$NoFunnel
   $publicUrls = @{
     AppUrl = "https://$tailscaleDnsName"
     ApiUrl = "https://$tailscaleDnsName`:8443/api/map-description"
@@ -238,7 +331,7 @@ try {
   Write-Host "  Experience Builder PID: $($builderProcess.Id)"
   Wait-ForHttp -Uri 'http://127.0.0.1:3000' -Name 'Experience Builder' -Attempts 60 -Process $builderProcess -ErrorLog $builderError
   if (-not $SkipTailscale) {
-    $publicUrls = Configure-TailscaleServe -DnsName $tailscaleDnsName
+    $publicUrls = Configure-TailscaleExposure -DnsName $tailscaleDnsName -UseFunnel:$funnelEnabled
     Wait-ForHttp -Uri $publicUrls.AppUrl -Name 'Experience Builder via Tailscale' -Attempts 30 -Process $builderProcess -ErrorLog $builderError
   }
 } catch {
@@ -252,4 +345,7 @@ Write-Host ''
 Write-Host '=== Listo ==='
 Write-Host "App: $($publicUrls.AppUrl)"
 Write-Host "API: $($publicUrls.ApiUrl)"
+if (-not $SkipTailscale) {
+  Write-Host "Acceso público (Funnel): $funnelEnabled"
+}
 Write-Host "Logs: $logDirectory"
