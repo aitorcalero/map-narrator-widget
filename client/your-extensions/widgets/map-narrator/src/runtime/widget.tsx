@@ -20,16 +20,37 @@ type Description = {
   limitations: string[]
 }
 
+function descriptionToSpeechText (description: Description): string {
+  return [
+    description.title,
+    description.description,
+    ...(description.spatialLayout ?? []),
+    ...(description.visualElements ?? []),
+    ...(description.visibleLabels ?? []),
+    ...(description.legendAndSymbols ?? []),
+    description.highlightedLayers.length > 0 ? `Capas destacadas: ${description.highlightedLayers.join(', ')}.` : '',
+    description.observedPatterns.length > 0 ? `Patrones: ${description.observedPatterns.join(' ')}` : '',
+    description.limitations.length > 0 ? `Limitaciones: ${description.limitations.join(' ')}` : ''
+  ].filter(Boolean).join('\n\n')
+}
+
 export default function Widget (props: AllWidgetProps<Config>) {
   const [mapView, setMapView] = React.useState<JimuMapView>()
   const [description, setDescription] = React.useState<Description>()
   const [error, setError] = React.useState<string>()
   const [loading, setLoading] = React.useState(false)
+  const [speechLoading, setSpeechLoading] = React.useState(false)
+  const [speechAudioUrl, setSpeechAudioUrl] = React.useState<string>()
   const [operationStatus, setOperationStatus] = React.useState<string>()
   const [diagnostics, setDiagnostics] = React.useState<unknown[]>([])
   const apiUrl = resolveApiUrl(props.config)
   const narrationMode = resolveNarrationMode(props.config)
   const mapWidgetId = props.useMapWidgetIds?.[0]
+  const speechApiUrl = apiUrl?.replace(/\/api\/map-description\/?$/, '/api/speech')
+
+  React.useEffect(() => () => {
+    if (speechAudioUrl) URL.revokeObjectURL(speechAudioUrl)
+  }, [speechAudioUrl])
 
   const onDescribe = async () => {
     if (!mapView?.view || !apiUrl) return
@@ -74,6 +95,32 @@ export default function Widget (props: AllWidgetProps<Config>) {
     }
   }
 
+  const onReadDescription = async () => {
+    if (!description || !speechApiUrl) return
+    setSpeechLoading(true)
+    setError(undefined)
+    try {
+      const response = await fetch(speechApiUrl, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ text: descriptionToSpeechText(description) })
+      })
+      if (!response.ok) {
+        const payload = await response.json().catch(() => undefined)
+        throw new Error(payload?.error?.message ?? 'No se pudo generar el audio.')
+      }
+      const audioUrl = URL.createObjectURL(await response.blob())
+      setSpeechAudioUrl(previous => {
+        if (previous) URL.revokeObjectURL(previous)
+        return audioUrl
+      })
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'No se pudo generar el audio.')
+    } finally {
+      setSpeechLoading(false)
+    }
+  }
+
   const disabledMessage = !mapWidgetId
     ? 'Selecciona un widget de mapa en la configuración.'
     : !apiUrl
@@ -110,6 +157,10 @@ export default function Widget (props: AllWidgetProps<Config>) {
           {description.highlightedLayers.length > 0 && <p><strong>Capas destacadas:</strong> {description.highlightedLayers.join(', ')}</p>}
           {description.observedPatterns.length > 0 && <p><strong>Patrones:</strong> {description.observedPatterns.join(' ')}</p>}
           <p><strong>Limitaciones:</strong> {description.limitations.join(' ')}</p>
+          <Button className='mt-2' type='secondary' onClick={onReadDescription} disabled={speechLoading || !speechApiUrl}>
+            {speechLoading ? 'Generando audio…' : 'Leer descripción'}
+          </Button>
+          {speechAudioUrl && <audio className='d-block mt-2 w-100' controls src={speechAudioUrl} aria-label='Audio de la descripción del mapa' />}
         </section>
       )}
       {mapWidgetId && <JimuMapViewComponent useMapWidgetId={mapWidgetId} onActiveViewChange={setMapView} />}

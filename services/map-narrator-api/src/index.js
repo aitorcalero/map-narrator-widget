@@ -1,5 +1,6 @@
 const path = require('node:path')
 const { createOpenAIDescriber } = require('./openai-describer')
+const { createElevenLabsSynthesizer } = require('./elevenlabs-synthesizer')
 const { createForensicsLogger } = require('./forensics-log')
 const { createServer } = require('./server')
 
@@ -12,8 +13,18 @@ if (!apiKey) {
   process.exit(1)
 }
 
+let synthesizeSpeech
+if (process.env.ELEVENLABS_API_KEY && process.env.ELEVENLABS_VOICE_ID) {
+  synthesizeSpeech = createElevenLabsSynthesizer({
+    apiKey: process.env.ELEVENLABS_API_KEY,
+    voiceId: process.env.ELEVENLABS_VOICE_ID,
+    model: process.env.ELEVENLABS_MODEL ?? 'eleven_multilingual_v2'
+  })
+}
+
 const server = createServer({
   describeMap: createOpenAIDescriber({ apiKey, model: process.env.OPENAI_MODEL ?? 'gpt-5-mini' }),
+  synthesizeSpeech,
   allowedOrigin: process.env.MAP_NARRATOR_ALLOWED_ORIGIN,
   forensics: (event) => {
     const entry = { event: 'map-narrator-forensics', ...event }
