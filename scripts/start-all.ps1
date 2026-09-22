@@ -102,6 +102,44 @@ function Assert-CommandAvailable {
   }
 }
 
+function Get-DescendantProcessIds {
+  param([int]$RootId)
+
+  $children = @(Get-CimInstance Win32_Process -Filter "ParentProcessId=$RootId" -ErrorAction SilentlyContinue)
+  $ids = @($children | ForEach-Object { $_.ProcessId })
+  foreach ($child in $ids) {
+    $ids += Get-DescendantProcessIds -RootId $child
+  }
+  return $ids
+}
+
+function Stop-ProcessesOnPorts {
+  param([int[]]$Ports)
+
+  $processIds = @(Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue |
+    Where-Object { $_.LocalPort -in $Ports } |
+    Select-Object -ExpandProperty OwningProcess -Unique)
+  if ($processIds.Count -eq 0) {
+    return
+  }
+
+  Write-Host "Deteniendo procesos anteriores en los puertos $($Ports -join ', ')..."
+  $allIds = @($processIds | ForEach-Object {
+    @($_) + @(Get-DescendantProcessIds -RootId $_)
+  } | Select-Object -Unique)
+  foreach ($processId in ($allIds | Sort-Object -Descending)) {
+    try {
+      Stop-Process -Id $processId -Force -ErrorAction Stop
+    } catch {
+      if ($_.Exception -is [System.ComponentModel.Win32Exception] -or $_.Exception.Message -match 'Access is denied|Acceso denegado') {
+        throw "No se pudo detener el proceso $processId. Ejecuta este script desde PowerShell como administrador."
+      }
+      throw
+    }
+  }
+  Start-Sleep -Seconds 2
+}
+
 function Configure-TailscaleServe {
   param([string]$DnsName)
 
@@ -147,6 +185,7 @@ if (-not (Test-Path (Join-Path $widgetSource 'manifest.json'))) {
 New-Item -ItemType Directory -Force -Path $widgetTarget | Out-Null
 Copy-Item -Path (Join-Path $widgetSource '*') -Destination $widgetTarget -Recurse -Force
 Write-Host "Widget sincronizado en $widgetTarget"
+Stop-ProcessesOnPorts -Ports @(8787, 3000, 3001)
 
 New-Item -ItemType Directory -Force -Path $logDirectory | Out-Null
 $apiOutput = Join-Path $logDirectory 'api.out.log'
