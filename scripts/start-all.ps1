@@ -8,6 +8,9 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+if ($SkipTailscale -and ($Funnel -or $NoFunnel)) {
+  throw '-SkipTailscale no se puede combinar con -Funnel o -NoFunnel.'
+}
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $apiDirectory = Join-Path $repoRoot 'services\map-narrator-api'
 $widgetSource = Join-Path $repoRoot 'client\your-extensions\widgets\map-narrator'
@@ -69,81 +72,6 @@ function Get-TailscaleDnsName {
 
 function Resolve-ExperienceBuilderRoot {
   param([string]$ConfiguredRoot)
-
-  $candidates = @(
-    $ConfiguredRoot,
-    (Join-Path $HOME 'arcgis-experience-builder-1.21'),
-    (Join-Path $HOME 'arcgis-experience-builder'),
-    (Join-Path $HOME 'Downloads\arcgis-experience-builder-1.21')
-  ) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique
-
-  foreach ($candidate in $candidates) {
-    $resolved = $candidate
-    if (Test-Path $candidate) {
-      $resolved = (Resolve-Path $candidate).Path
-      if ((Test-Path (Join-Path $resolved 'server')) -and (Test-Path (Join-Path $resolved 'client'))) {
-        return $resolved
-      }
-    }
-  }
-
-  if ($ConfiguredRoot) {
-    Write-Warning "EXPERIENCE_BUILDER_ROOT no apunta a una instalacion valida: '$ConfiguredRoot'."
-  }
-  $entered = Read-Host 'Indica la ruta de ArcGIS Experience Builder'
-  if (-not $entered -or -not (Test-Path (Join-Path $entered 'server')) -or -not (Test-Path (Join-Path $entered 'client'))) {
-    throw "No se encontro una instalacion valida de Experience Builder. Define EXPERIENCE_BUILDER_ROOT o usa -ExperienceBuilderRoot con una carpeta que contenga server y client."
-  }
-  return (Resolve-Path $entered).Path
-}
-
-function Assert-CommandAvailable {
-  param([string]$Name)
-  if (-not (Get-Command $Name -ErrorAction SilentlyContinue)) {
-    throw "$Name no esta disponible en PATH. Instala la dependencia y vuelve a intentarlo."
-  }
-}
-
-function Get-DescendantProcessIds {
-  param([int]$RootId)
-
-  $children = @(Get-CimInstance Win32_Process -Filter "ParentProcessId=$RootId" -ErrorAction SilentlyContinue)
-  $ids = @($children | ForEach-Object { $_.ProcessId })
-  foreach ($child in $ids) {
-    $ids += Get-DescendantProcessIds -RootId $child
-  }
-  return $ids
-}
-
-function Stop-ProcessesOnPorts {
-  param([int[]]$Ports)
-
-  $processIds = @(Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue |
-    Where-Object { $_.LocalPort -in $Ports } |
-    Select-Object -ExpandProperty OwningProcess -Unique)
-  if ($processIds.Count -eq 0) {
-    return
-  }
-
-  Write-Host "Deteniendo procesos anteriores en los puertos $($Ports -join ', ')..."
-  $allIds = @($processIds | ForEach-Object {
-    @($_) + @(Get-DescendantProcessIds -RootId $_)
-  } | Select-Object -Unique)
-  foreach ($processId in ($allIds | Sort-Object -Descending)) {
-    try {
-      Stop-Process -Id $processId -Force -ErrorAction Stop
-    } catch {
-      if ($_.Exception -is [System.ComponentModel.Win32Exception] -or $_.Exception.Message -match 'Access is denied|Acceso denegado') {
-        throw "No se pudo detener el proceso $processId. Ejecuta este script desde PowerShell como administrador."
-      }
-      throw
-    }
-  }
-  Start-Sleep -Seconds 2
-}
-
-function Configure-TailscaleServe {
-  param([string]$DnsName)
 
   $candidates = @(
     $ConfiguredRoot,

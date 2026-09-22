@@ -159,7 +159,22 @@ powershell -ExecutionPolicy Bypass -File .\scripts\start-all.ps1 -Funnel
 powershell -ExecutionPolicy Bypass -File .\scripts\start-all.ps1 -NoFunnel
 ```
 
-Los scripts leen la clave almacenada o `OPENAI_API_KEY`, inician el backend en el puerto 8787 y Experience Builder, y devuelven error si alguno no queda disponible. Los registros se guardan en `/tmp/map-narrator` en Linux/macOS y `%TEMP%\map-narrator` en Windows. No finalizan procesos ajenos: libera manualmente un puerto ocupado antes de iniciar.
+Los scripts leen la clave almacenada o `OPENAI_API_KEY`, sincronizan el widget, limpian los procesos que escuchan en los puertos de desarrollo, inician el backend en el puerto 8787 y Experience Builder, y devuelven error si alguno no queda disponible. Los registros se guardan en `/tmp/map-narrator` en Linux/macOS y `%TEMP%\map-narrator` en Windows.
+
+Ambos launchers aceptan el mismo flujo:
+
+```sh
+# Usar Tailscale Serve sin acceso público
+bash scripts/start-all.sh --no-funnel
+
+# Activar Tailscale Funnel
+bash scripts/start-all.sh --funnel
+
+# Ejecutar sin Tailscale
+bash scripts/start-all.sh --skip-tailscale
+```
+
+En Windows se usan los equivalentes `-NoFunnel`, `-Funnel` y `-SkipTailscale`. Si no se indica una opción de Funnel, el script pregunta. La ruta de Experience Builder se puede proporcionar con `--experience-builder-root` o `-ExperienceBuilderRoot`; también se detectan las instalaciones habituales bajo el directorio personal.
 
 ### 4. Tailscale (recomendado para desarrollo local)
 
@@ -167,7 +182,7 @@ Para evitar problemas con certificados SSL locales y Service Workers:
 
 ```sh
 # Exponer Experience Builder vía Tailscale
-tailscale serve --https=443 --bg https+insecure://127.0.0.1:3001
+tailscale serve --https=443 --bg http://127.0.0.1:3000
 
 # Exponer el backend API vía Tailscale
 tailscale serve --https=8443 --bg http://127.0.0.1:8787
