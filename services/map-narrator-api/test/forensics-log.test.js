@@ -14,5 +14,7 @@ test('writes bounded forensic events with owner-only file permissions', (t) => {
   log({ event: 'map-narrator-forensics', requestId: 'request-1', stage: 'upstream', status: 502, code: 'OPENAI_401' })
 
   assert.deepEqual(JSON.parse(fs.readFileSync(filePath, 'utf8')), { event: 'map-narrator-forensics', requestId: 'request-1', stage: 'upstream', status: 502, code: 'OPENAI_401' })
-  assert.equal(fs.statSync(filePath).mode & 0o777, 0o600)
+  if (process.platform !== 'win32') {
+    assert.equal(fs.statSync(filePath).mode & 0o777, 0o600)
+  }
 })

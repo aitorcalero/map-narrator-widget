@@ -19,6 +19,8 @@ test('sends bounded structured-output request to the Responses API', async () =>
   const describeMap = createOpenAIDescriber({
     apiKey: 'test-key',
     fetchImpl: async (_url, options) => {
+      assert.equal(options.headers.authorization, 'Bearer test-key')
+      assert.equal(options.headers['content-type'], 'application/json')
       sent = JSON.parse(options.body)
       return new Response(JSON.stringify({
         output: [{

@@ -1,7 +1,4 @@
 #!/bin/bash
-# Script para guardar la clave de OpenAI de forma segura
-# Detecta y rechaza claves duplicadas
-
 set -e
 
 CREDENTIALS_DIR="$HOME/.config/map-narrator"
@@ -64,4 +61,4 @@ echo "Clave guardada correctamente en $CREDENTIALS_FILE"
 echo "Permisos: $(stat -c '%a' "$CREDENTIALS_FILE")"
 echo "Longitud: ${#KEY} caracteres"
 echo ""
-echo "Ahora puedes ejecutar: bash /home/aitor/work/arcgis-experience-builder/scripts/start-all.sh"
+echo "Ahora puedes ejecutar: bash scripts/start-all.sh"
