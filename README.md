@@ -15,6 +15,10 @@ La explicación técnica completa del diseño, la evolución, los problemas
 resueltos y la configuración multiplataforma está disponible en
 [docs/ARTICULO-TECNICO.md](docs/ARTICULO-TECNICO.md).
 
+También hay una versión narrativa en inglés preparada como propuesta editorial
+para Esri News en
+[docs/ESRI-NEWS-ARTICLE.md](docs/ESRI-NEWS-ARTICLE.md).
+
 ## Componentes necesarios
 
 ### Requisitos de software
