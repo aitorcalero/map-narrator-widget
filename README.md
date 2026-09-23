@@ -11,6 +11,10 @@ El widget genera descripciones accesibles del mapa visible (colores, símbolos, 
 
 En modo visual, describe lo que una persona sin visión necesitaría para entender el mapa. El widget solo captura cuando el usuario pulsa el botón. La lectura de audio es opcional y requiere configurar ElevenLabs en el backend; si no está configurado, la generación de texto sigue funcionando.
 
+La explicación técnica completa del diseño, la evolución, los problemas
+resueltos y la configuración multiplataforma está disponible en
+[docs/ARTICULO-TECNICO.md](docs/ARTICULO-TECNICO.md).
+
 ## Componentes necesarios
 
 ### Requisitos de software
