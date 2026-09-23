@@ -2,6 +2,7 @@ export interface Config {
   apiUrl?: string
   style?: 'technical' | 'citizen' | 'accessible'
   visualMode?: boolean
+  customPrompt?: string
 }
 
 export function resolveNarrationMode (config: Config | undefined): 'metadata' | 'visual' {

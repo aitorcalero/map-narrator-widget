@@ -70,6 +70,25 @@ test('sends text and an image input for visual narration', async () => {
   assert.equal(sent.max_output_tokens, 2400)
 })
 
+test('places a custom visual focus before the protected visual instructions', async () => {
+  let sent
+  const describeMap = createOpenAIDescriber({
+    apiKey: 'test-key',
+    fetchImpl: async (_url, options) => {
+      sent = JSON.parse(options.body)
+      return new Response(JSON.stringify({ output_text: JSON.stringify({
+        title: 'Vista visual', description: 'Resumen visual.', spatialLayout: [], visualElements: [], visibleLabels: [], legendAndSymbols: [], highlightedLayers: [], observedPatterns: [], limitations: []
+      }) }), { status: 200 })
+    }
+  })
+
+  await describeMap({ ...request, customPrompt: 'Focus on parks and cycle routes.', visual: { enabled: true, dataUrl: 'data:image/png;base64,iVBORw0KGgo=', mimeType: 'image/png', width: 10, height: 10 } })
+
+  const prompt = sent.input[0].content[0].text
+  assert.match(prompt, /^Focus on parks and cycle routes\./)
+  assert.match(prompt, /Do not invent/)
+})
+
 test('exposes an upstream HTTP status without exposing OpenAI response details', async () => {
   const describeMap = createOpenAIDescriber({
     apiKey: 'test-key',
