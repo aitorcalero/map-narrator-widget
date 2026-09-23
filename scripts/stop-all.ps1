@@ -1,6 +1,7 @@
 [CmdletBinding()]
 param(
-  [switch]$ResetTailscale
+  [switch]$ResetTailscale,
+  [switch]$CloseWebpack
 )
 
 $ErrorActionPreference = 'Stop'
@@ -38,8 +39,37 @@ function Stop-ProcessesOnPorts {
   }
 }
 
+function Stop-WebpackProcesses {
+  $processes = @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
+    Where-Object {
+      $_.CommandLine -and (
+        $_.CommandLine -match '(?i)webpack' -or
+        $_.CommandLine -match '(?i)experience-builder.*client'
+      )
+    })
+
+  foreach ($process in $processes) {
+    $allIds = (@($process.ProcessId) + @(Get-DescendantProcessIds -RootId $process.ProcessId)) |
+      Select-Object -Unique |
+      Sort-Object -Descending
+    foreach ($id in $allIds) {
+      try {
+        Stop-Process -Id $id -Force -ErrorAction Stop
+        Write-Host "Webpack/proceso de cliente detenido: $id"
+      } catch {
+        if ($_.Exception.Message -notmatch 'no existe|does not exist') {
+          throw "No se pudo detener el proceso Webpack $id. Ejecuta PowerShell como administrador si tiene privilegios elevados."
+        }
+      }
+    }
+  }
+}
+
 Write-Host 'Deteniendo Map Narrator en los puertos 8787, 3000 y 3001...'
 Stop-ProcessesOnPorts -Ports @(8787, 3000, 3001)
+if ($CloseWebpack) {
+  Stop-WebpackProcesses
+}
 
 if ($ResetTailscale) {
   if (Get-Command tailscale.exe -ErrorAction SilentlyContinue) {

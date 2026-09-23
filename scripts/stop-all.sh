@@ -2,12 +2,14 @@
 set -euo pipefail
 
 RESET_TAILSCALE=false
+CLOSE_WEBPACK=false
 
 usage() {
   cat <<'EOF'
 Uso: bash scripts/stop-all.sh [opciones]
 
   --reset-tailscale  Retirar Serve y Funnel además de detener los servicios
+  --close-webpack    Detener también procesos Webpack del cliente
   -h, --help         Mostrar esta ayuda
 EOF
 }
@@ -15,6 +17,7 @@ EOF
 while (($#)); do
   case "$1" in
     --reset-tailscale) RESET_TAILSCALE=true; shift ;;
+    --close-webpack) CLOSE_WEBPACK=true; shift ;;
     -h|--help) usage; exit 0 ;;
     *) echo "ERROR: opción desconocida: $1" >&2; usage >&2; exit 2 ;;
   esac
@@ -47,8 +50,22 @@ stop_processes_on_ports() {
   done
 }
 
+stop_webpack_processes() {
+  local pid
+  command -v pgrep >/dev/null 2>&1 || {
+    echo 'ADVERTENCIA: pgrep no está disponible; no se buscarán procesos Webpack.' >&2
+    return 0
+  }
+  while read -r pid; do
+    [[ -n "$pid" ]] && stop_pid_tree "$pid"
+  done < <(pgrep -f 'webpack|experience-builder.*/client' 2>/dev/null || true)
+}
+
 echo 'Deteniendo Map Narrator en los puertos 8787, 3000 y 3001...'
 stop_processes_on_ports
+if $CLOSE_WEBPACK; then
+  stop_webpack_processes
+fi
 
 if $RESET_TAILSCALE; then
   command -v tailscale >/dev/null 2>&1 || {

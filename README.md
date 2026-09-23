@@ -184,11 +184,13 @@ La opción de parada solo actúa sobre procesos que escuchan en los puertos de d
 ```bash
 bash scripts/stop-all.sh
 bash scripts/stop-all.sh --reset-tailscale
+bash scripts/stop-all.sh --close-webpack
 ```
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\stop-all.ps1
 powershell -ExecutionPolicy Bypass -File .\scripts\stop-all.ps1 -ResetTailscale
+powershell -ExecutionPolicy Bypass -File .\scripts\stop-all.ps1 -CloseWebpack
 ```
 
 La opción `--reset-tailscale`/`-ResetTailscale` retira también las publicaciones
