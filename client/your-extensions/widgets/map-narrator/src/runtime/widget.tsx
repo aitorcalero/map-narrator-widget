@@ -140,16 +140,27 @@ export default function Widget (props: AllWidgetProps<Config>) {
     <div className='widget-map-narrator jimu-widget h-100 p-3 d-flex flex-column overflow-hidden'>
       <h3 className='h5'>Narrador del mapa</h3>
       <p className='text-muted'>Genera un resumen basado en la extensión y las capas visibles del mapa.</p>
-      <Button type='primary' onClick={onDescribe} disabled={Boolean(disabledMessage) || loading} aria-describedby='map-narrator-status'>
+      <Button type='primary' onClick={onDescribe} disabled={Boolean(disabledMessage) || loading} aria-describedby='map-narrator-status' aria-busy={loading}>
+        {loading && <span className='spinner-border spinner-border-sm me-2' aria-hidden='true' />}
         {loading ? operationStatus ?? 'Analizando mapa…' : narrationMode === 'visual' ? 'Describir visualmente el mapa' : 'Describir metadatos del mapa'}
       </Button>
+      {loading && (
+        <div
+          className='progress mt-3'
+          role='progressbar'
+          aria-label='Progreso de la solicitud'
+          aria-valuetext={operationStatus ?? 'Procesando la solicitud'}
+        >
+          <div className='progress-bar progress-bar-striped progress-bar-animated w-100' />
+        </div>
+      )}
       <Button className='mt-2 align-self-start' type='tertiary' disabled={diagnostics.length === 0} onClick={() => {
         if (!openDiagnosticWindow(diagnostics)) setError('El navegador bloqueó la ventana de diagnóstico. Permite las ventanas emergentes e inténtalo de nuevo.')
       }}>
         Abrir registro de diagnóstico ({diagnostics.length})
       </Button>
       {narrationMode === 'visual' && <p className='text-muted mt-2 mb-0'>La captura se procesa para generar la descripción y no se guarda en el widget. El registro solo conserva tamaño y dimensiones, nunca los bytes de la imagen.</p>}
-      <div id='map-narrator-status' className='mt-3' role='status' aria-live='polite'>
+      <div id='map-narrator-status' className='mt-3' role='status' aria-live='polite' aria-busy={loading}>
         {disabledMessage ?? operationStatus ?? ''}
       </div>
       {error && <div className='alert alert-danger mt-3' role='alert'>{error}</div>}
