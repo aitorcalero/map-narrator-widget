@@ -8,36 +8,11 @@ import { captureVisualMap } from './visual-capture'
 import { createDiagnosticEntry, openDiagnosticWindow } from './diagnostics'
 import { narrationContentStyle } from './layout'
 import { focusAudioAfterGeneration } from './audio-focus'
-
-type Description = {
-  title: string
-  description: string
-  spatialLayout?: string[]
-  visualElements?: string[]
-  visibleLabels?: string[]
-  legendAndSymbols?: string[]
-  highlightedLayers: string[]
-  observedPatterns: string[]
-  limitations: string[]
-}
-
-function descriptionToSpeechText (description: Description): string {
-  return [
-    description.title,
-    description.description,
-    ...(description.spatialLayout ?? []),
-    ...(description.visualElements ?? []),
-    ...(description.visibleLabels ?? []),
-    ...(description.legendAndSymbols ?? []),
-    description.highlightedLayers.length > 0 ? `Capas destacadas: ${description.highlightedLayers.join(', ')}.` : '',
-    description.observedPatterns.length > 0 ? `Patrones: ${description.observedPatterns.join(' ')}` : '',
-    description.limitations.length > 0 ? `Limitaciones: ${description.limitations.join(' ')}` : ''
-  ].filter(Boolean).join('\n\n')
-}
+import { buildSpeechSummary, type SpeechDescription } from './speech-summary'
 
 export default function Widget (props: AllWidgetProps<Config>) {
   const [mapView, setMapView] = React.useState<JimuMapView>()
-  const [description, setDescription] = React.useState<Description>()
+  const [description, setDescription] = React.useState<SpeechDescription>()
   const [error, setError] = React.useState<string>()
   const [loading, setLoading] = React.useState(false)
   const [speechLoading, setSpeechLoading] = React.useState(false)
@@ -116,7 +91,7 @@ export default function Widget (props: AllWidgetProps<Config>) {
       const response = await fetch(speechApiUrl, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ text: descriptionToSpeechText(description) })
+        body: JSON.stringify({ text: buildSpeechSummary(description) })
       })
       if (!response.ok) {
         const payload = await response.json().catch(() => undefined)

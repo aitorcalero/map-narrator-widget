@@ -285,5 +285,5 @@ permite usar, modificar y redistribuir el proyecto, manteniendo esta atribución
 
 - [x] [Añadir una barra de progreso mientras se realiza la petición a OpenAI](https://github.com/aitorcalero/map-narrator-widget/issues/2).
 - [ ] [Personalizar el prompt de descripción visual](https://github.com/aitorcalero/map-narrator-widget/issues/8).
-- [ ] [Generar un resumen breve y visual para ElevenLabs](https://github.com/aitorcalero/map-narrator-widget/issues/9).
+- [x] [Generar un resumen breve y visual para ElevenLabs](https://github.com/aitorcalero/map-narrator-widget/issues/9).
 - [x] [Mover el reproductor de audio al inicio y enfocar al terminar](https://github.com/aitorcalero/map-narrator-widget/issues/7).
