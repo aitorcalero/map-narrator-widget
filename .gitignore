@@ -58,3 +58,7 @@ version.json
 
 # Configuración local
 client/.npmrc
+
+# Artículos editoriales locales (no publicar en GitHub)
+docs/ARTICULO-TECNICO.md
+docs/ESRI-NEWS-ARTICLE.md
