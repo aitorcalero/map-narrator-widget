@@ -23,9 +23,11 @@ const VISUAL_DESCRIPTION_SCHEMA = {
   }
 }
 
+const { buildVisualPrompt } = require('./prompt')
+
 function buildResponseInput (request) {
   const visualInstructions = request.visual
-    ? 'Describe the current rendered map image for a person who cannot see it. Start with overall layout, then relative spatial relationships, visible symbols, colors, labels, and patterns. Use supplied GIS metadata only to corroborate visible meaning. Do not invent labels, values, causes, entities, or relationships. State uncertainty and unreadable details explicitly.'
+    ? buildVisualPrompt(request.customPrompt)
     : 'Describe this GIS map only from the supplied metadata. Separate observed facts from cautious inferences; never invent entities, values, causes, or spatial relationships. Always state relevant limitations.'
   const text = `${visualInstructions} Write in ${request.locale}. Style: ${request.style}.\n\n${JSON.stringify(request.context)}`
   return request.visual

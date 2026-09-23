@@ -23,6 +23,8 @@ Expected health response: `{"status":"ok"}`.
 
 The widget must be configured with the deployed HTTPS endpoint ending in `/api/map-description`. It sends only bounded map metadata: map title, extent, scale, basemap, and up to twelve layer metadata records. Visual mode additionally sends an explicit user-requested JPEG screenshot (quality 75) up to 4 MiB (the complete JSON request is capped at 6 MiB). It never sends features, attributes, geometries, or browser credentials.
 
+Visual requests may include an optional `customPrompt` focus of up to 500 characters. The service appends the protected accessibility, privacy, uncertainty, and safety instructions to every visual prompt; attempts to override those instructions are rejected with `400 INVALID_REQUEST`. Omitting the field preserves the default prompt and existing behavior.
+
 When ElevenLabs is configured, `POST /api/speech` accepts a bounded JSON body
 such as `{"text":"Descripción del mapa"}` and returns `audio/mpeg`. The API key
 and voice ID remain server-side; the widget only receives the generated audio.

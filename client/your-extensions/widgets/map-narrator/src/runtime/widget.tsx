@@ -61,6 +61,7 @@ export default function Widget (props: AllWidgetProps<Config>) {
           context,
           locale,
           style,
+          customPrompt: narrationMode === 'visual' ? props.config?.customPrompt : undefined,
           visual
         })
       })

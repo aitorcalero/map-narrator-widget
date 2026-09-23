@@ -1,5 +1,5 @@
 import { React, hooks, type ImmutableObject } from 'jimu-core'
-import { Select, Switch, TextInput } from 'jimu-ui'
+import { Select, Switch, TextArea, TextInput } from 'jimu-ui'
 import { MapWidgetSelector, SettingRow, SettingSection } from 'jimu-ui/advanced/setting-components'
 import type { AllWidgetSettingProps } from 'jimu-for-builder'
 import type { Config } from '../config'
@@ -21,6 +21,18 @@ export default function Setting (props: AllWidgetSettingProps<ImmutableObject<Co
         <div>
           <Switch checked={props.config.visualMode === true} onChange={(event) => props.onSettingChange({ id: props.id, config: props.config.set('visualMode', event.target.checked) })} />
           <p className='text-muted mt-2 mb-0'>{translate('visualModeHelp')}</p>
+        </div>
+      </SettingRow>
+      <SettingRow label={translate('customPromptLabel')}>
+        <div>
+          <TextArea
+            aria-label={translate('customPromptLabel')}
+            placeholder={translate('customPromptPlaceholder')}
+            maxLength={500}
+            value={props.config.customPrompt ?? ''}
+            onChange={(event) => updateConfig('customPrompt', event.target.value)}
+          />
+          <p className='text-muted mt-2 mb-0'>{translate('customPromptHelp')}</p>
         </div>
       </SettingRow>
       <SettingRow label={translate('styleLabel')}>
