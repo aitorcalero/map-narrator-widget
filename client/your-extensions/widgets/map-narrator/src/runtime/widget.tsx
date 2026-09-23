@@ -7,6 +7,7 @@ import { buildMapContext } from './map-context'
 import { captureVisualMap } from './visual-capture'
 import { createDiagnosticEntry, openDiagnosticWindow } from './diagnostics'
 import { narrationContentStyle } from './layout'
+import { focusAudioAfterGeneration } from './audio-focus'
 
 type Description = {
   title: string
@@ -41,6 +42,7 @@ export default function Widget (props: AllWidgetProps<Config>) {
   const [loading, setLoading] = React.useState(false)
   const [speechLoading, setSpeechLoading] = React.useState(false)
   const [speechAudioUrl, setSpeechAudioUrl] = React.useState<string>()
+  const speechAudioRef = React.useRef<HTMLAudioElement>(null)
   const [operationStatus, setOperationStatus] = React.useState<string>()
   const [diagnostics, setDiagnostics] = React.useState<unknown[]>([])
   const apiUrl = resolveApiUrl(props.config)
@@ -50,6 +52,10 @@ export default function Widget (props: AllWidgetProps<Config>) {
 
   React.useEffect(() => () => {
     if (speechAudioUrl) URL.revokeObjectURL(speechAudioUrl)
+  }, [speechAudioUrl])
+
+  React.useEffect(() => {
+    focusAudioAfterGeneration(speechAudioRef.current, speechAudioUrl)
   }, [speechAudioUrl])
 
   const onDescribe = async () => {
@@ -138,6 +144,7 @@ export default function Widget (props: AllWidgetProps<Config>) {
 
   return (
     <div className='widget-map-narrator jimu-widget h-100 p-3 d-flex flex-column overflow-hidden'>
+      {speechAudioUrl && <audio ref={speechAudioRef} className='d-block mb-2 w-100' controls src={speechAudioUrl} aria-label='Audio de la descripción del mapa' />}
       <h3 className='h5'>Narrador del mapa</h3>
       <p className='text-muted'>Genera un resumen basado en la extensión y las capas visibles del mapa.</p>
       <Button type='primary' onClick={onDescribe} disabled={Boolean(disabledMessage) || loading} aria-describedby='map-narrator-status' aria-busy={loading}>
@@ -178,7 +185,6 @@ export default function Widget (props: AllWidgetProps<Config>) {
           <Button className='mt-2' type='secondary' onClick={onReadDescription} disabled={speechLoading || !speechApiUrl}>
             {speechLoading ? 'Generando audio…' : 'Leer descripción'}
           </Button>
-          {speechAudioUrl && <audio className='d-block mt-2 w-100' controls src={speechAudioUrl} aria-label='Audio de la descripción del mapa' />}
         </section>
       )}
       {mapWidgetId && <JimuMapViewComponent useMapWidgetId={mapWidgetId} onActiveViewChange={setMapView} />}
