@@ -151,11 +151,11 @@ function Configure-TailscaleExposure {
 
   $command = if ($UseFunnel) { 'funnel' } else { 'serve' }
   Write-Host "Configurando Tailscale $command..."
-  & tailscale.exe $command --https=443 --bg http://127.0.0.1:3000
+  $null = & tailscale.exe $command --https=443 --bg http://127.0.0.1:3000 2>&1
   if ($LASTEXITCODE -ne 0) {
     throw "No se pudo publicar Experience Builder con Tailscale $command."
   }
-  & tailscale.exe $command --https=8443 --bg http://127.0.0.1:8787
+  $null = & tailscale.exe $command --https=8443 --bg http://127.0.0.1:8787 2>&1
   if ($LASTEXITCODE -ne 0) {
     throw "No se pudo publicar la API con Tailscale $command."
   }
