@@ -137,6 +137,9 @@ function Stop-ProcessesOnPorts {
     try {
       Stop-Process -Id $processId -Force -ErrorAction Stop
     } catch {
+      if ($_.Exception.Message -match 'No se encuentra ningún proceso|Cannot find a process') {
+        continue
+      }
       if ($_.Exception -is [System.ComponentModel.Win32Exception] -or $_.Exception.Message -match 'Access is denied|Acceso denegado') {
         throw "No se pudo detener el proceso $processId. Ejecuta este script desde PowerShell como administrador."
       }
