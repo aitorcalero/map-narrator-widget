@@ -1,5 +1,6 @@
 import { React, type AllWidgetProps } from 'jimu-core'
-import { Button } from 'jimu-ui'
+import { Alert, Button, Typography } from 'jimu-ui'
+import { useTheme } from 'jimu-theme'
 import { JimuMapViewComponent, type JimuMapView } from 'jimu-arcgis'
 import type { Config } from '../config'
 import { resolveApiUrl, resolveNarrationMode } from '../config'
@@ -7,6 +8,7 @@ import { buildMapContext } from './map-context'
 import { captureVisualMap } from './visual-capture'
 import { createDiagnosticEntry, openDiagnosticWindow } from './diagnostics'
 import { narrationContentStyle } from './layout'
+import { inlineSpinnerStyle } from './styles'
 import { focusAudioAfterGeneration } from './audio-focus'
 import { ProgressTracker } from './progress-tracker'
 import { metadataDescribeSteps, speechSteps, type ProgressStep, visualDescribeSteps } from './progress-steps'
@@ -15,6 +17,7 @@ import { buildSpeechSummary, type SpeechDescription } from './speech-summary'
 const WIDGET_VERSION = '1.1.0 · stable'
 
 export default function Widget (props: AllWidgetProps<Config>) {
+  const theme = useTheme()
   const [mapView, setMapView] = React.useState<JimuMapView>()
   const [description, setDescription] = React.useState<SpeechDescription>()
   const [error, setError] = React.useState<string>()
@@ -32,6 +35,11 @@ export default function Widget (props: AllWidgetProps<Config>) {
   const narrationMode = resolveNarrationMode(props.config)
   const mapWidgetId = props.useMapWidgetIds?.[0]
   const speechApiUrl = apiUrl?.replace(/\/api\/map-description\/?$/, '/api/speech')
+
+  const spinnerStyle = React.useMemo(
+    () => inlineSpinnerStyle(theme, theme.sys.spacing(2)),
+    [theme]
+  )
 
   React.useEffect(() => () => {
     if (speechAudioUrl) URL.revokeObjectURL(speechAudioUrl)
@@ -157,12 +165,12 @@ export default function Widget (props: AllWidgetProps<Config>) {
   return (
     <div className='widget-map-narrator jimu-widget h-100 p-3 d-flex flex-column overflow-hidden'>
       <div className='d-flex align-items-start justify-content-between'>
-        <h3 className='h5 mb-0'>Narrador del mapa</h3>
-        <span className='small text-muted ms-3' aria-label='Versión del widget'>{WIDGET_VERSION}</span>
+        <Typography component='h3' variant='h5' className='mb-0'>Narrador del mapa</Typography>
+        <Typography component='span' variant='label3' color='backgroundHint' style={{ marginInlineStart: theme.sys.spacing(3) }} aria-label='Versión del widget'>{WIDGET_VERSION}</Typography>
       </div>
-      <p className='text-muted'>Genera un resumen basado en la extensión y las capas visibles del mapa.</p>
+      <Typography component='p' color='backgroundHint'>Genera un resumen basado en la extensión y las capas visibles del mapa.</Typography>
       <Button type='primary' onClick={onDescribe} disabled={Boolean(disabledMessage) || loading || speechLoading} aria-describedby='map-narrator-status' aria-busy={loading || speechLoading}>
-        {loading && <span className='spinner-border spinner-border-sm me-2' aria-hidden='true' />}
+        {loading && <span css={spinnerStyle} aria-hidden='true' />}
         {loading ? operationStatus ?? 'Analizando mapa…' : narrationMode === 'visual' ? 'Describir visualmente el mapa' : 'Describir metadatos del mapa'}
       </Button>
       <Button className='mt-2 align-self-start' type='tertiary' disabled={diagnostics.length === 0} onClick={() => {
@@ -170,29 +178,38 @@ export default function Widget (props: AllWidgetProps<Config>) {
       }}>
         Abrir registro de diagnóstico ({diagnostics.length})
       </Button>
-      {narrationMode === 'visual' && <p className='text-muted mt-2 mb-0'>La captura se procesa para generar la descripción y no se guarda en el widget. El registro solo conserva tamaño y dimensiones, nunca los bytes de la imagen.</p>}
+      {narrationMode === 'visual' && <Typography component='p' color='backgroundHint' className='mt-2 mb-0'>La captura se procesa para generar la descripción y no se guarda en el widget. El registro solo conserva tamaño y dimensiones, nunca los bytes de la imagen.</Typography>}
       <div id='map-narrator-status' className='mt-3' role='status' aria-live='polite' aria-busy={loading}>
         {disabledMessage ?? operationStatus ?? ''}
       </div>
-      {error && <div className='alert alert-danger mt-3' role='alert'>{error}</div>}
+      {error && (
+        <Alert
+          className='mt-3'
+          type='error'
+          text={error}
+          withIcon
+          fullWidth
+          role='alert'
+        />
+      )}
       {description && (
         <section className='mt-3' style={narrationContentStyle} aria-label='Descripción generada del mapa'>
-          <h4 className='h6'>{description.title}</h4>
-          <p>{description.description}</p>
-          {description.spatialLayout && description.spatialLayout.length > 0 && <><h4 className='h6'>Distribución espacial</h4><ul>{description.spatialLayout.map((item, index) => <li key={`layout-${index}`}>{item}</li>)}</ul></>}
-          {description.visualElements && description.visualElements.length > 0 && <><h4 className='h6'>Elementos visuales</h4><ul>{description.visualElements.map((item, index) => <li key={`visual-${index}`}>{item}</li>)}</ul></>}
-          {description.legendAndSymbols && description.legendAndSymbols.length > 0 && <><h4 className='h6'>Leyenda y símbolos</h4><ul>{description.legendAndSymbols.map((item, index) => <li key={`legend-${index}`}>{item}</li>)}</ul></>}
-          {description.visibleLabels && description.visibleLabels.length > 0 && <><h4 className='h6'>Etiquetas visibles</h4><ul>{description.visibleLabels.map((item, index) => <li key={`label-${index}`}>{item}</li>)}</ul></>}
-          {description.highlightedLayers.length > 0 && <p><strong>Capas destacadas:</strong> {description.highlightedLayers.join(', ')}</p>}
-          {description.observedPatterns.length > 0 && <p><strong>Patrones:</strong> {description.observedPatterns.join(' ')}</p>}
-          <p><strong>Limitaciones:</strong> {description.limitations.join(' ')}</p>
+          <Typography component='h4' variant='h6'>{description.title}</Typography>
+          <Typography component='p'>{description.description}</Typography>
+          {description.spatialLayout && description.spatialLayout.length > 0 && <><Typography component='h4' variant='h6'>Distribución espacial</Typography><ul>{description.spatialLayout.map((item, index) => <li key={`layout-${index}`}>{item}</li>)}</ul></>}
+          {description.visualElements && description.visualElements.length > 0 && <><Typography component='h4' variant='h6'>Elementos visuales</Typography><ul>{description.visualElements.map((item, index) => <li key={`visual-${index}`}>{item}</li>)}</ul></>}
+          {description.legendAndSymbols && description.legendAndSymbols.length > 0 && <><Typography component='h4' variant='h6'>Leyenda y símbolos</Typography><ul>{description.legendAndSymbols.map((item, index) => <li key={`legend-${index}`}>{item}</li>)}</ul></>}
+          {description.visibleLabels && description.visibleLabels.length > 0 && <><Typography component='h4' variant='h6'>Etiquetas visibles</Typography><ul>{description.visibleLabels.map((item, index) => <li key={`label-${index}`}>{item}</li>)}</ul></>}
+          {description.highlightedLayers.length > 0 && <Typography component='p'><strong>Capas destacadas:</strong> {description.highlightedLayers.join(', ')}</Typography>}
+          {description.observedPatterns.length > 0 && <Typography component='p'><strong>Patrones:</strong> {description.observedPatterns.join(' ')}</Typography>}
+          <Typography component='p'><strong>Limitaciones:</strong> {description.limitations.join(' ')}</Typography>
           <Button className='mt-2' type='secondary' onClick={onReadDescription} disabled={speechLoading || !speechApiUrl}>
             {speechLoading ? 'Generando audio…' : 'Leer descripción'}
           </Button>
           <div className='mt-2'>
             {speechAudioUrl
               ? <audio ref={speechAudioRef} className='d-block w-100' controls src={speechAudioUrl} aria-label='Audio de la descripción del mapa' />
-              : <div className='small text-muted'>Pulsa "Leer descripción" para generar el audio.</div>}
+              : <Typography component='div' variant='label3' color='backgroundHint'>Pulsa "Leer descripción" para generar el audio.</Typography>}
           </div>
         </section>
       )}
