@@ -1,3 +1,5 @@
+const { buildMetadataPrompt, buildVisualPrompt } = require('./prompt')
+
 const DESCRIPTION_SCHEMA = {
   type: 'object',
   additionalProperties: false,
@@ -23,13 +25,11 @@ const VISUAL_DESCRIPTION_SCHEMA = {
   }
 }
 
-const { buildVisualPrompt } = require('./prompt')
-
 function buildResponseInput (request) {
-  const visualInstructions = request.visual
+  const instructions = request.visual
     ? buildVisualPrompt(request.customPrompt)
-    : 'Describe this GIS map only from the supplied metadata. Separate observed facts from cautious inferences; never invent entities, values, causes, or spatial relationships. Always state relevant limitations.'
-  const text = `${visualInstructions} Write in ${request.locale}. Style: ${request.style}.\n\n${JSON.stringify(request.context)}`
+    : buildMetadataPrompt(request.customPrompt)
+  const text = `${instructions} Write in ${request.locale}. Style: ${request.style}.\n\n${JSON.stringify(request.context)}`
   return request.visual
     ? [{ role: 'user', content: [{ type: 'input_text', text }, { type: 'input_image', image_url: request.visual.dataUrl, detail: 'high' }] }]
     : text
@@ -68,7 +68,7 @@ function createOpenAIDescriber({ apiKey, model = 'gpt-5-mini', fetchImpl = globa
       body: JSON.stringify({
         model,
         reasoning: { effort: 'minimal' },
-        max_output_tokens: request.visual ? 2400 : 600,
+        max_output_tokens: request.visual ? 2400 : request.customPrompt ? 1800 : 600,
         input: buildResponseInput(request),
         text: {
           format: { type: 'json_schema', name: request.visual ? 'visual_map_description' : 'map_description', strict: true, schema: request.visual ? VISUAL_DESCRIPTION_SCHEMA : DESCRIPTION_SCHEMA }

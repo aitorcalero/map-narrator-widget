@@ -31,11 +31,11 @@ export function buildSpeechSummary (description: SpeechDescription): string {
     labelled('Capas destacadas', nonEmpty(description.highlightedLayers))
   ].filter(Boolean)
 
-  const parts = visualParts.length > 1
-    ? visualParts
-    : [description.title, description.description, labelled('Patrones', nonEmpty(description.observedPatterns)), labelled('Capas destacadas', nonEmpty(description.highlightedLayers))].filter(Boolean)
-
-  const summary = parts.join('\n\n')
+  const summary = [
+    description.title,
+    description.description,
+    ...visualParts.slice(1)
+  ].filter(Boolean).join('\n\n')
   return summary.length <= MAX_SPEECH_SUMMARY_LENGTH
     ? summary
     : `${summary.slice(0, MAX_SPEECH_SUMMARY_LENGTH - 1).trimEnd()}…`

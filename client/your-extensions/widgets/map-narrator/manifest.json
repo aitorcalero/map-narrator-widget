@@ -2,7 +2,7 @@
   "name": "map-narrator",
   "label": "Map Narrator",
   "type": "widget",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "exbVersion": "1.21.0",
   "author": "Aitor Calero García",
   "description": "Generates a bounded text description from the connected map's visible metadata.",

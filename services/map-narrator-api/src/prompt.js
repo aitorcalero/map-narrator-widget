@@ -1,5 +1,6 @@
 const MAX_CUSTOM_PROMPT_LENGTH = 500
 
+const DEFAULT_METADATA_PROMPT = 'Describe this GIS map only from the supplied metadata. Separate observed facts from cautious inferences; never invent entities, values, causes, or spatial relationships. Always state relevant limitations.'
 const DEFAULT_VISUAL_PROMPT = 'Describe the current rendered map image for a person who cannot see it. Start with overall layout, then relative spatial relationships, visible symbols, colors, labels, and patterns. Use supplied GIS metadata only to corroborate visible meaning. Do not invent labels, values, causes, entities, or relationships. State uncertainty and unreadable details explicitly.'
 
 const UNSAFE_CUSTOM_PROMPT_PATTERNS = [
@@ -23,8 +24,16 @@ function normalizeCustomPrompt (value) {
   return prompt
 }
 
-function buildVisualPrompt (customPrompt) {
-  return customPrompt ? `${customPrompt}\n\n${DEFAULT_VISUAL_PROMPT}` : DEFAULT_VISUAL_PROMPT
+function buildPrompt (customPrompt, defaultPrompt) {
+  return customPrompt ? `${customPrompt}\n\n${defaultPrompt}` : defaultPrompt
 }
 
-module.exports = { DEFAULT_VISUAL_PROMPT, MAX_CUSTOM_PROMPT_LENGTH, buildVisualPrompt, normalizeCustomPrompt }
+function buildMetadataPrompt (customPrompt) {
+  return buildPrompt(customPrompt, DEFAULT_METADATA_PROMPT)
+}
+
+function buildVisualPrompt (customPrompt) {
+  return buildPrompt(customPrompt, DEFAULT_VISUAL_PROMPT)
+}
+
+module.exports = { DEFAULT_METADATA_PROMPT, DEFAULT_VISUAL_PROMPT, MAX_CUSTOM_PROMPT_LENGTH, buildMetadataPrompt, buildVisualPrompt, normalizeCustomPrompt }
