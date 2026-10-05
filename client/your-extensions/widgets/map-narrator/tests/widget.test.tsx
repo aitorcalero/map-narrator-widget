@@ -196,6 +196,7 @@ describe('Widget: operación en curso', () => {
 
     // El panel de progreso anuncia el estado como región viva.
     expect(screen.getAllByRole('status').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getByRole('progressbar', { name: 'Progreso de la solicitud' }).getAttribute('aria-valuetext')).toBe('Analizando la configuración visible del mapa…')
     expect(container.querySelector('.map-narrator-progress-tracker')).toBeTruthy()
 
     await act(async () => {

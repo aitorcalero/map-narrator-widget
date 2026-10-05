@@ -54,14 +54,14 @@ describe('ProgressTracker', () => {
   })
 
   it('dibuja un segmento por paso, tantos como tenga la lista', () => {
-    const { container } = render(
+    render(
       <ProgressTracker steps={visualDescribeSteps} currentIndex={0} elapsedSeconds={1} />
     )
 
-    // El contenedor de segmentos es el único hijo marcado como decorativo.
-    const track = container.querySelector('[aria-hidden="true"]')
+    const track = screen.getByRole('progressbar', { name: 'Progreso de la solicitud' })
     expect(track).toBeTruthy()
-    expect(track?.children).toHaveLength(visualDescribeSteps.length)
+    expect(track.children).toHaveLength(visualDescribeSteps.length)
+    expect(track.getAttribute('aria-valuetext')).toBe(visualDescribeSteps[0].label)
   })
 
   it('aplica estilos propios a cada segmento en lugar de depender de clases inexistentes', () => {
@@ -69,7 +69,7 @@ describe('ProgressTracker', () => {
       <ProgressTracker steps={metadataDescribeSteps} currentIndex={1} elapsedSeconds={3} />
     )
 
-    const track = container.querySelector('[aria-hidden="true"]')
+    const track = container.querySelector('[role="progressbar"]')
     const segments = Array.from(track?.children ?? [])
 
     // Regresión: antes dependían de `gap-1`, `bg-opacity-25`,

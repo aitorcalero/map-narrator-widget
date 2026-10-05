@@ -52,7 +52,12 @@ export function ProgressTracker (props: ProgressTrackerProps) {
       aria-live='polite'
       aria-busy='true'
     >
-      <div css={trackStyle} aria-hidden='true'>
+      <div
+        css={trackStyle}
+        role='progressbar'
+        aria-label='Progreso de la solicitud'
+        aria-valuetext={currentStep?.label ?? 'Procesando la solicitud'}
+      >
         {steps.map((step, index) => (
           <div
             key={step.key}
