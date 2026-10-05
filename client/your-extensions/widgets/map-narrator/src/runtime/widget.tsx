@@ -164,6 +164,7 @@ export default function Widget (props: AllWidgetProps<Config>) {
 
   return (
     <div className='widget-map-narrator jimu-widget h-100 p-3 d-flex flex-column overflow-hidden'>
+      {speechAudioUrl && <audio ref={speechAudioRef} className='d-block mb-2 w-100' controls src={speechAudioUrl} aria-label='Audio de la descripción del mapa' />}
       <div className='d-flex align-items-start justify-content-between'>
         <Typography component='h3' variant='h5' className='mb-0'>Narrador del mapa</Typography>
         <Typography component='span' variant='label3' color='backgroundHint' style={{ marginInlineStart: theme.sys.spacing(3) }} aria-label='Versión del widget'>{WIDGET_VERSION}</Typography>
@@ -207,9 +208,7 @@ export default function Widget (props: AllWidgetProps<Config>) {
             {speechLoading ? 'Generando audio…' : 'Leer descripción'}
           </Button>
           <div className='mt-2'>
-            {speechAudioUrl
-              ? <audio ref={speechAudioRef} className='d-block w-100' controls src={speechAudioUrl} aria-label='Audio de la descripción del mapa' />
-              : <Typography component='div' variant='label3' color='backgroundHint'>Pulsa "Leer descripción" para generar el audio.</Typography>}
+            {!speechAudioUrl && <Typography component='div' variant='label3' color='backgroundHint'>Pulsa "Leer descripción" para generar el audio.</Typography>}
           </div>
         </section>
       )}
