@@ -10,11 +10,13 @@ import {
   progressSegmentPendingStyle
 } from './styles'
 import type { ProgressStep } from './progress-steps'
+import type { LocaleMessages } from '../locale'
 
 export interface ProgressTrackerProps {
   steps: ProgressStep[]
   currentIndex: number
   elapsedSeconds: number
+  messages: LocaleMessages
 }
 
 /**
@@ -28,7 +30,7 @@ export interface ProgressTrackerProps {
  * parte del CSS que inyecta Experience Builder, así que no tenían efecto.
  */
 export function ProgressTracker (props: ProgressTrackerProps) {
-  const { steps, currentIndex, elapsedSeconds } = props
+  const { steps, currentIndex, elapsedSeconds, messages } = props
   const theme = useTheme()
 
   const spinnerStyle = React.useMemo(() => inlineSpinnerStyle(theme), [theme])
@@ -55,8 +57,8 @@ export function ProgressTracker (props: ProgressTrackerProps) {
       <div
         css={trackStyle}
         role='progressbar'
-        aria-label='Progreso de la solicitud'
-        aria-valuetext={currentStep?.label ?? 'Procesando la solicitud'}
+        aria-label={messages.progressRequest}
+        aria-valuetext={currentStep?.label ?? messages.progressProcessing}
       >
         {steps.map((step, index) => (
           <div
@@ -85,7 +87,7 @@ export function ProgressTracker (props: ProgressTrackerProps) {
           <span css={spinnerStyle} aria-hidden='true' />
           {currentStep?.label}
         </span>
-        <span css={counterStyle} aria-label={`Tiempo transcurrido: ${elapsedSeconds} segundos`}>
+        <span css={counterStyle} aria-label={messages.elapsedTime.replace('{count}', String(elapsedSeconds))}>
           {elapsedSeconds}s
         </span>
       </Typography>

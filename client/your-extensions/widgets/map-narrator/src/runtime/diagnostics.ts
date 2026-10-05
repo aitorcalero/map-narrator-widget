@@ -26,15 +26,20 @@ export function createDiagnosticEntry (input: DiagnosticEntryInput) {
   }
 }
 
-export function openDiagnosticWindow (entries: unknown[]): boolean {
+export function openDiagnosticWindow (
+  entries: unknown[],
+  messages: { diagnosticsPopupTitle: string, diagnosticsHeading: string, diagnosticsNotice: string },
+  locale: string
+): boolean {
   const popup = window.open('', 'map-narrator-diagnostics', 'popup=yes,width=900,height=700,resizable=yes,scrollbars=yes')
   if (!popup) return false
-  popup.document.title = 'Map Narrator — Registro de diagnóstico'
+  popup.document.documentElement.lang = locale
+  popup.document.title = messages.diagnosticsPopupTitle
   popup.document.body.replaceChildren()
   const heading = popup.document.createElement('h1')
-  heading.textContent = 'Registro de diagnóstico local'
+  heading.textContent = messages.diagnosticsHeading
   const notice = popup.document.createElement('p')
-  notice.textContent = 'No incluye claves de API ni bytes de capturas. Copia solo la información necesaria para diagnosticar un fallo.'
+  notice.textContent = messages.diagnosticsNotice
   const output = popup.document.createElement('pre')
   output.textContent = JSON.stringify(entries, null, 2)
   popup.document.body.append(heading, notice, output)

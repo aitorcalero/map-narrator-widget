@@ -99,3 +99,22 @@ test('rejects invalid text before calling ElevenLabs', async () => {
   await assert.rejects(() => synthesize(''), { code: 'INVALID_SPEECH_REQUEST', status: 400 })
   assert.equal(called, false)
 })
+
+test('uses the locale-specific voice and falls back to the default voice', async () => {
+  const urls = []
+  const synthesize = createElevenLabsSynthesizer({
+    apiKey: 'eleven-test-key',
+    voiceId: 'voice-default',
+    voiceIds: { en: 'voice-en', es: undefined },
+    fetchImpl: async (url) => {
+      urls.push(url)
+      return new Response(Buffer.from('audio'), { status: 200, headers: { 'content-type': 'audio/mpeg' } })
+    }
+  })
+
+  await synthesize('Map description', { locale: 'en' })
+  await synthesize('Descripción', { locale: 'es' })
+  await synthesize('Descripción')
+
+  assert.deepEqual(urls.map((url) => url.split('/').pop()), ['voice-en', 'voice-default', 'voice-default'])
+})

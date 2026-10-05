@@ -11,6 +11,8 @@ El widget genera descripciones accesibles del mapa visible (colores, símbolos, 
 
 En modo visual, describe lo que una persona sin visión necesitaría para entender el mapa. El widget solo captura cuando el usuario pulsa el botón. La lectura de audio es opcional y requiere configurar ElevenLabs en el backend; si no está configurado, la generación de texto sigue funcionando.
 
+La interfaz y las descripciones generadas se adaptan al idioma preferido del navegador: español (`es`) o inglés (`en`). Se aceptan variantes regionales como `es-ES` y `en-US`; si no hay un idioma compatible, se usa inglés. El audio lee la descripción en el idioma generado. La cabecera del widget muestra de forma discreta la versión y el idioma activo (por ejemplo, `1.2.1 · stable · ES`). El audio usa la voz configurada para ese idioma (`ELEVENLABS_VOICE_ID_EN`/`ELEVENLABS_VOICE_ID_ES`, con `ELEVENLABS_VOICE_ID` como respaldo).
+
 ## Componentes necesarios
 
 ### Requisitos de software
@@ -94,6 +96,7 @@ export OPENAI_API_KEY="***"
 export OPENAI_MODEL="gpt-5-mini"     # modelo por defecto
 export ELEVENLABS_API_KEY="***"  # opcional
 export ELEVENLABS_VOICE_ID="tu_voice_id"  # necesario si se habilita ElevenLabs
+export ELEVENLABS_VOICE_ID_EN="tu_voice_id_en"  # opcional: voz nativa para inglés
 export ELEVENLABS_MODEL="eleven_multilingual_v2"
 export MAP_NARRATOR_ALLOWED_ORIGIN="https://tu-dominio-experience-builder"  # origen permitido
 export PORT=8787
@@ -159,7 +162,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\start-all.ps1 -Funnel
 powershell -ExecutionPolicy Bypass -File .\scripts\start-all.ps1 -NoFunnel
 ```
 
-Los scripts leen la clave almacenada o `OPENAI_API_KEY`, sincronizan el widget, limpian los procesos que escuchan en los puertos de desarrollo, inician el backend en el puerto 8787 y Experience Builder, y devuelven error si alguno no queda disponible. Los registros se guardan en `/tmp/map-narrator` en Linux/macOS y `%TEMP%\map-narrator` en Windows.
+Los scripts leen la clave almacenada o `OPENAI_API_KEY`, sincronizan el widget, limpian los procesos que escuchan en los puertos de desarrollo, inician el backend en el puerto 8787 y Experience Builder, y devuelven error si alguno no queda disponible. Los registros se guardan en `/tmp/map-narrator` en Linux/macOS y `%TEMP%\map-narrator` en Windows. En Windows, además, el launcher detiene los procesos webpack previos del cliente, sincroniza el widget con obocopy /MIR, descarta la compilación anterior y no da el arranque por válido hasta que client\dist contiene la misma versión que manifest.json.
 
 Ambos launchers aceptan el mismo flujo:
 
@@ -216,6 +219,10 @@ La lectura en voz alta usa el mismo host de la API, cambiando la ruta a
 `/api/speech`. Si no se configuran `ELEVENLABS_API_KEY` y
 `ELEVENLABS_VOICE_ID`, la generación de descripciones sigue funcionando y el
 botón de lectura informa de que el servicio no está configurado.
+
+El texto se genera en el idioma del navegador (ES/EN) y el widget envía ese idioma a `/api/speech`. Para que el narrador use una voz nativa en inglés, define
+`ELEVENLABS_VOICE_ID_EN` (y opcionalmente `ELEVENLABS_VOICE_ID_ES`); si faltan, se usa
+`ELEVENLABS_VOICE_ID`.
 
 ## Configuración del widget en Experience Builder
 

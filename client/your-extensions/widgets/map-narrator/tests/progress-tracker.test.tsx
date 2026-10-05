@@ -1,12 +1,18 @@
 import { React } from 'jimu-core'
 import { render, screen } from '@testing-library/react'
+import { getLocaleMessages } from '../src/locale'
 import { ProgressTracker } from '../src/runtime/progress-tracker'
-import { metadataDescribeSteps, speechSteps, visualDescribeSteps } from '../src/runtime/progress-steps'
+import { getMetadataDescribeSteps, getSpeechSteps, getVisualDescribeSteps } from '../src/runtime/progress-steps'
 
 describe('ProgressTracker', () => {
+  const messages = getLocaleMessages('es')
+  const metadataDescribeSteps = getMetadataDescribeSteps(messages)
+  const speechSteps = getSpeechSteps(messages)
+  const visualDescribeSteps = getVisualDescribeSteps(messages)
+
   it('no renderiza nada cuando no hay operación en curso', () => {
     const { container } = render(
-      <ProgressTracker steps={[]} currentIndex={-1} elapsedSeconds={0} />
+      <ProgressTracker steps={[]} currentIndex={-1} elapsedSeconds={0} messages={messages} />
     )
 
     expect(container.firstChild).toBeNull()
@@ -15,7 +21,7 @@ describe('ProgressTracker', () => {
 
   it('no renderiza nada si hay pasos pero el índice sigue inactivo', () => {
     const { container } = render(
-      <ProgressTracker steps={metadataDescribeSteps} currentIndex={-1} elapsedSeconds={0} />
+      <ProgressTracker steps={metadataDescribeSteps} currentIndex={-1} elapsedSeconds={0} messages={messages} />
     )
 
     expect(container.firstChild).toBeNull()
@@ -28,6 +34,7 @@ describe('ProgressTracker', () => {
         steps={metadataDescribeSteps}
         currentIndex={1}
         elapsedSeconds={7}
+        messages={messages}
       />
     )
 
@@ -37,7 +44,7 @@ describe('ProgressTracker', () => {
 
   it('anuncia el tiempo transcurrido con una etiqueta accesible', () => {
     render(
-      <ProgressTracker steps={speechSteps} currentIndex={0} elapsedSeconds={12} />
+      <ProgressTracker steps={speechSteps} currentIndex={0} elapsedSeconds={12} messages={messages} />
     )
 
     expect(screen.getByLabelText('Tiempo transcurrido: 12 segundos')).toBeTruthy()
@@ -45,7 +52,7 @@ describe('ProgressTracker', () => {
 
   it('expone el estado como región viva para lectores de pantalla', () => {
     render(
-      <ProgressTracker steps={visualDescribeSteps} currentIndex={0} elapsedSeconds={1} />
+      <ProgressTracker steps={visualDescribeSteps} currentIndex={0} elapsedSeconds={1} messages={messages} />
     )
 
     const status = screen.getByRole('status')
@@ -55,7 +62,7 @@ describe('ProgressTracker', () => {
 
   it('dibuja un segmento por paso, tantos como tenga la lista', () => {
     render(
-      <ProgressTracker steps={visualDescribeSteps} currentIndex={0} elapsedSeconds={1} />
+      <ProgressTracker steps={visualDescribeSteps} currentIndex={0} elapsedSeconds={1} messages={messages} />
     )
 
     const track = screen.getByRole('progressbar', { name: 'Progreso de la solicitud' })
@@ -66,7 +73,7 @@ describe('ProgressTracker', () => {
 
   it('aplica estilos propios a cada segmento en lugar de depender de clases inexistentes', () => {
     const { container } = render(
-      <ProgressTracker steps={metadataDescribeSteps} currentIndex={1} elapsedSeconds={3} />
+      <ProgressTracker steps={metadataDescribeSteps} currentIndex={1} elapsedSeconds={3} messages={messages} />
     )
 
     const track = container.querySelector('[role="progressbar"]')
@@ -85,7 +92,7 @@ describe('ProgressTracker', () => {
 
   it('el indicador de actividad se renderiza con estilos propios y es decorativo', () => {
     const { container } = render(
-      <ProgressTracker steps={metadataDescribeSteps} currentIndex={0} elapsedSeconds={2} />
+      <ProgressTracker steps={metadataDescribeSteps} currentIndex={0} elapsedSeconds={2} messages={messages} />
     )
 
     // Regresión: `spinner-border` no existe en EXB y dejaba un span vacío.
@@ -97,7 +104,7 @@ describe('ProgressTracker', () => {
 
   it('mantiene la clase de identificación y el estilo base del panel', () => {
     const { container } = render(
-      <ProgressTracker steps={metadataDescribeSteps} currentIndex={0} elapsedSeconds={2} />
+      <ProgressTracker steps={metadataDescribeSteps} currentIndex={0} elapsedSeconds={2} messages={messages} />
     )
 
     const panel = container.querySelector('.map-narrator-progress-tracker') as HTMLElement
@@ -108,7 +115,7 @@ describe('ProgressTracker', () => {
 
   it('usa la variante tipográfica del tema en lugar de la clase small', () => {
     const { container } = render(
-      <ProgressTracker steps={metadataDescribeSteps} currentIndex={0} elapsedSeconds={2} />
+      <ProgressTracker steps={metadataDescribeSteps} currentIndex={0} elapsedSeconds={2} messages={messages} />
     )
 
     // Regresión: `small` como clase no existe; solo el selector de elemento `<small>`.

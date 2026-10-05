@@ -40,6 +40,7 @@ function buildUpstreamError ({ status, response, payload }) {
 function createElevenLabsSynthesizer ({
   apiKey,
   voiceId,
+  voiceIds = {},
   model = 'eleven_multilingual_v2',
   fetchImpl = fetch,
   timeoutMs = 40_000,
@@ -50,7 +51,8 @@ function createElevenLabsSynthesizer ({
   if (!apiKey) throw new Error('ELEVENLABS_API_KEY is required')
   if (!voiceId) throw new Error('ELEVENLABS_VOICE_ID is required')
 
-  return async function synthesize (text) {
+  return async function synthesize (text, { locale } = {}) {
+    const selectedVoiceId = voiceIds[locale] || voiceId
     if (typeof text !== 'string' || text.trim().length === 0 || text.length > MAX_TEXT_LENGTH) {
       throw Object.assign(new Error('text must be a non-empty string within the supported length'), { status: 400, code: 'INVALID_SPEECH_REQUEST' })
     }
@@ -60,7 +62,7 @@ function createElevenLabsSynthesizer ({
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
       try {
-        const response = await fetchImpl(`${ELEVENLABS_URL}/${encodeURIComponent(voiceId)}`, {
+        const response = await fetchImpl(`${ELEVENLABS_URL}/${encodeURIComponent(selectedVoiceId)}`, {
           method: 'POST',
           headers: {
             accept: 'audio/mpeg',

@@ -1,5 +1,7 @@
 const { buildMetadataPrompt, buildVisualPrompt } = require('./prompt')
 
+const LANGUAGE_NAMES = { en: 'English', es: 'Spanish' }
+
 const DESCRIPTION_SCHEMA = {
   type: 'object',
   additionalProperties: false,
@@ -29,7 +31,7 @@ function buildResponseInput (request) {
   const instructions = request.visual
     ? buildVisualPrompt(request.customPrompt)
     : buildMetadataPrompt(request.customPrompt)
-  const text = `${instructions} Write in ${request.locale}. Style: ${request.style}.\n\n${JSON.stringify(request.context)}`
+  const text = `${instructions} Write in ${LANGUAGE_NAMES[request.locale.slice(0, 2).toLowerCase()] ?? request.locale}. Style: ${request.style}.\n\n${JSON.stringify(request.context)}`
   return request.visual
     ? [{ role: 'user', content: [{ type: 'input_text', text }, { type: 'input_image', image_url: request.visual.dataUrl, detail: 'high' }] }]
     : text

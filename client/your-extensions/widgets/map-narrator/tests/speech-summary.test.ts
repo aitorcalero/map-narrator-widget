@@ -1,4 +1,5 @@
 import { buildSpeechSummary, type SpeechDescription } from '../src/runtime/speech-summary'
+import { getLocaleMessages } from '../src/locale'
 
 const description: SpeechDescription = {
   title: 'Movilidad urbana',
@@ -14,7 +15,7 @@ const description: SpeechDescription = {
 
 describe('buildSpeechSummary', () => {
   it('includes the main narration and visual details while excluding limitations', () => {
-    const summary = buildSpeechSummary(description)
+    const summary = buildSpeechSummary(description, getLocaleMessages('es'))
 
     expect(summary).toContain('Descripción completa')
     expect(summary).toContain('Distribución espacial')
@@ -32,7 +33,7 @@ describe('buildSpeechSummary', () => {
       legendAndSymbols: [],
       observedPatterns: [],
       highlightedLayers: []
-    })
+    }, getLocaleMessages('es'))
 
     expect(summary).toContain(description.description)
     expect(summary).not.toContain('No se analizaron entidades individuales.')
@@ -42,9 +43,15 @@ describe('buildSpeechSummary', () => {
     const summary = buildSpeechSummary({
       ...description,
       spatialLayout: ['x'.repeat(3000)]
-    })
+    }, getLocaleMessages('es'))
 
     expect(summary.length).toBe(2400)
     expect(summary.endsWith('…')).toBe(true)
+  })
+
+  it('uses the selected language for visual summary labels', () => {
+    const summary = buildSpeechSummary(description, getLocaleMessages('en'))
+    expect(summary).toContain('Spatial layout:')
+    expect(summary).not.toContain('Distribución espacial')
   })
 })

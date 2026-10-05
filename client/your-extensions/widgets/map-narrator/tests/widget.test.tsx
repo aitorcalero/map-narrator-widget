@@ -48,17 +48,66 @@ function baseProps (overrides: Record<string, unknown> = {}) {
 
 const fetchMock = global.fetch as unknown as jest.Mock
 
+function setBrowserLanguages (languages: string[]) {
+  Object.defineProperty(navigator, 'languages', { configurable: true, value: languages })
+  Object.defineProperty(navigator, 'language', { configurable: true, value: languages[0] })
+}
+
 beforeEach(() => {
   mockMapViewHandlers.length = 0
+  setBrowserLanguages(['es-ES'])
+  document.documentElement.lang = ''
   if (fetchMock?.mockReset) fetchMock.mockReset()
 })
 
 describe('Widget: estado inicial', () => {
   it('muestra el título y la versión del widget', () => {
-    render(<Widget {...baseProps()} />)
+    const { container } = render(<Widget {...baseProps()} />)
 
     expect(screen.getByText('Narrador del mapa')).toBeTruthy()
-    expect(screen.getByLabelText('Versión del widget').textContent).toBe('1.1.0 · stable')
+    expect(screen.getByLabelText('Versión del widget').textContent).toBe('1.2.1 · stable · ES')
+    expect(container.firstElementChild?.getAttribute('lang')).toBe('es')
+  })
+
+  it('uses the supported browser locale for the UI and API request', async () => {
+    setBrowserLanguages(['en-GB'])
+    document.documentElement.lang = 'es'
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        description: {
+          title: 'Urban mobility',
+          description: 'The map shows the transit network.',
+          highlightedLayers: [],
+          observedPatterns: [],
+          limitations: []
+        }
+      })
+    })
+
+    render(<Widget {...baseProps({ config: { apiUrl: 'https://narrator.example.com/api/map-description' } })} />)
+    expect(screen.getByText('Map Narrator')).toBeTruthy()
+    expect(screen.getByText('Describe map metadata')).toBeTruthy()
+
+    await act(async () => {
+      mockMapViewHandlers.forEach(handler => handler({ view: mockView }))
+    })
+    const button = await screen.findByRole('button', { name: /Describe map metadata/ })
+    await act(async () => { (button as HTMLButtonElement).click() })
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled())
+
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).locale).toBe('en')
+  })
+
+  it('updates the UI when the browser language changes', () => {
+    render(<Widget {...baseProps()} />)
+    expect(screen.getByText('Narrador del mapa')).toBeTruthy()
+
+    setBrowserLanguages(['en-US'])
+    act(() => { window.dispatchEvent(new Event('languagechange')) })
+
+    expect(screen.getByText('Map Narrator')).toBeTruthy()
   })
 
   it('explica que hace el widget', () => {
@@ -288,7 +337,7 @@ describe('Widget: operación en curso', () => {
     await act(async () => { button.click() })
 
     await waitFor(() => {
-      expect(screen.getByText('Servicio de descripción no disponible')).toBeTruthy()
+      expect(screen.getByText('El servicio de descripción no está disponible. Inténtalo de nuevo más tarde.')).toBeTruthy()
     })
 
     // Regresión: el aviso usaba `alert alert-danger`, que EXB no inyecta.
