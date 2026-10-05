@@ -1,5 +1,5 @@
 import { React, hooks, type ImmutableObject } from 'jimu-core'
-import { Select, Switch, TextInput } from 'jimu-ui'
+import { Select, Switch, TextArea, TextInput } from 'jimu-ui'
 import { MapWidgetSelector, SettingRow, SettingSection } from 'jimu-ui/advanced/setting-components'
 import type { AllWidgetSettingProps } from 'jimu-for-builder'
 import type { Config } from '../config'
@@ -11,19 +11,31 @@ export default function Setting (props: AllWidgetSettingProps<ImmutableObject<Co
 
   return (
     <SettingSection title={translate('settingsTitle')}>
-      <SettingRow label={translate('mapLabel')}>
+      <SettingRow label={translate('mapLabel')} flow='wrap'>
         <MapWidgetSelector useMapWidgetIds={props.useMapWidgetIds} onSelect={(useMapWidgetIds) => props.onSettingChange({ id: props.id, useMapWidgetIds })} />
       </SettingRow>
-      <SettingRow label={translate('apiUrlLabel')}>
+      <SettingRow label={translate('apiUrlLabel')} flow='wrap'>
         <TextInput aria-label={translate('apiUrlLabel')} placeholder='https://api.example.com/api/map-description' value={props.config.apiUrl ?? ''} onChange={(event) => updateConfig('apiUrl', event.target.value)} />
       </SettingRow>
-      <SettingRow label={translate('visualModeLabel')}>
+      <SettingRow label={translate('visualModeLabel')} flow='wrap'>
         <div>
           <Switch checked={props.config.visualMode === true} onChange={(event) => props.onSettingChange({ id: props.id, config: props.config.set('visualMode', event.target.checked) })} />
-          <p className='text-muted mt-2 mb-0'>{translate('visualModeHelp')}</p>
+          <p className='mt-2 mb-0' style={{ color: '#fff', fontSize: '0.75rem' }}>{translate('visualModeHelp')}</p>
         </div>
       </SettingRow>
-      <SettingRow label={translate('styleLabel')}>
+      <SettingRow label={translate('customPromptLabel')} flow='wrap'>
+        <div>
+          <TextArea
+            aria-label={translate('customPromptLabel')}
+            placeholder={translate('customPromptPlaceholder')}
+            maxLength={500}
+            value={props.config.customPrompt ?? ''}
+            onChange={(event) => updateConfig('customPrompt', event.target.value)}
+          />
+          <p className='mt-2 mb-0' style={{ color: '#fff', fontSize: '0.75rem' }}>{translate('customPromptHelp')}</p>
+        </div>
+      </SettingRow>
+      <SettingRow label={translate('styleLabel')} flow='wrap'>
         <Select aria-label={translate('styleLabel')} value={props.config.style ?? 'technical'} onChange={(event) => updateConfig('style', event.target.value)}>
           <option value='technical'>{translate('technical')}</option>
           <option value='citizen'>{translate('citizen')}</option>

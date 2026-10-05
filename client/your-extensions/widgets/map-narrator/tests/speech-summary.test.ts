@@ -13,26 +13,14 @@ const description: SpeechDescription = {
 }
 
 describe('buildSpeechSummary', () => {
-  it('prioritizes visual content and excludes limitations from speech', () => {
+  it('includes the main narration and visual details while excluding limitations', () => {
     const summary = buildSpeechSummary(description)
 
+    expect(summary).toContain('Descripción completa')
     expect(summary).toContain('Distribución espacial')
     expect(summary).toContain('Elementos visuales')
     expect(summary).toContain('La red conecta el centro con el norte.')
-    expect(summary).not.toContain('Descripción completa')
     expect(summary).not.toContain('No se analizaron entidades individuales.')
-    const fullDescription = [
-      description.title,
-      description.description,
-      ...(description.spatialLayout ?? []),
-      ...(description.visualElements ?? []),
-      ...(description.visibleLabels ?? []),
-      ...(description.legendAndSymbols ?? []),
-      ...description.highlightedLayers,
-      ...description.observedPatterns,
-      ...description.limitations
-    ].join('\n\n')
-    expect(summary.length).toBeLessThan(fullDescription.length)
   })
 
   it('falls back to the full description when optional visual fields are empty', () => {

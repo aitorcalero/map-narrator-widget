@@ -23,6 +23,68 @@ test('sends bounded text to ElevenLabs and returns audio', async () => {
   assert.deepEqual(result.audio, Buffer.from('audio'))
 })
 
+test('retries retryable upstream failures and eventually returns audio', async () => {
+  let attempts = 0
+  const delays = []
+  const synthesize = createElevenLabsSynthesizer({
+    apiKey: 'eleven-test-key',
+    voiceId: 'voice-123',
+    maxRetries: 2,
+    retryDelayMs: 5,
+    sleep: async (ms) => { delays.push(ms) },
+    fetchImpl: async () => {
+      attempts += 1
+      if (attempts < 2) return new Response('', { status: 503 })
+      return new Response(Buffer.from('audio-ok'), { status: 200, headers: { 'content-type': 'audio/mpeg' } })
+    }
+  })
+
+  const result = await synthesize('Texto')
+
+  assert.equal(attempts, 2)
+  assert.deepEqual(delays, [5])
+  assert.deepEqual(result.audio, Buffer.from('audio-ok'))
+})
+
+test('maps quota exceeded as a non-retryable error', async () => {
+  let attempts = 0
+  const synthesize = createElevenLabsSynthesizer({
+    apiKey: 'eleven-test-key',
+    voiceId: 'voice-123',
+    maxRetries: 3,
+    fetchImpl: async () => {
+      attempts += 1
+      return new Response(JSON.stringify({ detail: { status: 'quota_exceeded' } }), {
+        status: 401,
+        headers: { 'content-type': 'application/json' }
+      })
+    }
+  })
+
+  await assert.rejects(() => synthesize('Texto'), { code: 'ELEVENLABS_QUOTA_EXCEEDED', status: 402 })
+  assert.equal(attempts, 1)
+})
+
+test('retries timeout failures before giving up', async () => {
+  let attempts = 0
+  const delays = []
+  const synthesize = createElevenLabsSynthesizer({
+    apiKey: 'eleven-test-key',
+    voiceId: 'voice-123',
+    maxRetries: 1,
+    retryDelayMs: 7,
+    sleep: async (ms) => { delays.push(ms) },
+    fetchImpl: async () => {
+      attempts += 1
+      throw Object.assign(new Error('aborted'), { name: 'AbortError' })
+    }
+  })
+
+  await assert.rejects(() => synthesize('Texto'), { code: 'ELEVENLABS_TIMEOUT', status: 504 })
+  assert.equal(attempts, 2)
+  assert.deepEqual(delays, [7])
+})
+
 test('rejects invalid text before calling ElevenLabs', async () => {
   let called = false
   const synthesize = createElevenLabsSynthesizer({
