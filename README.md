@@ -226,6 +226,7 @@ botón de lectura informa de que el servicio no está configurado.
    - Después de generar una descripción, pulsa **Leer descripción** para solicitar el audio a ElevenLabs.
    - **Map widget**: selecciona el widget de mapa que quieres describir
    - **Visual mode** (opcional): activa si quieres que capture y describa la vista visual
+   - **Custom narration instructions** (opcional): añade instrucciones de hasta 500 caracteres para descripciones metadata y visuales. Las instrucciones protegidas de accesibilidad, privacidad, incertidumbre y seguridad siempre se mantienen.
 
 ## Despliegue en producción
 
@@ -319,6 +320,6 @@ permite usar, modificar y redistribuir el proyecto, manteniendo esta atribución
 ## Roadmap
 
 - [x] [Añadir una barra de progreso mientras se realiza la petición a OpenAI](https://github.com/aitorcalero/map-narrator-widget/issues/2).
-- [ ] [Personalizar el prompt de descripción visual](https://github.com/aitorcalero/map-narrator-widget/issues/8).
+- [x] [Personalizar el prompt de descripción visual](https://github.com/aitorcalero/map-narrator-widget/issues/8).
 - [x] [Generar un resumen breve y visual para ElevenLabs](https://github.com/aitorcalero/map-narrator-widget/issues/9).
 - [x] [Mover el reproductor de audio al inicio y enfocar al terminar](https://github.com/aitorcalero/map-narrator-widget/issues/7).

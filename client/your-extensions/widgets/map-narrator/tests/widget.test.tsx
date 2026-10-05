@@ -14,6 +14,15 @@ jest.mock('jimu-arcgis', () => ({
   }
 }))
 
+jest.mock('../src/runtime/visual-capture', () => ({
+  captureVisualMap: jest.fn().mockResolvedValue({
+    enabled: true,
+    imageDataUrl: 'data:image/jpeg;base64,/9j/4AAQ',
+    width: 1,
+    height: 1
+  })
+}))
+
 import Widget from '../src/runtime/widget'
 
 const mockView = {
@@ -168,6 +177,43 @@ describe('Widget: componentes oficiales y regresiones de estilos', () => {
 })
 
 describe('Widget: operación en curso', () => {
+  it.each([
+    { mode: 'metadata', visualMode: false, buttonName: /Describir metadatos del mapa/ },
+    { mode: 'visual', visualMode: true, buttonName: /Describir visualmente el mapa/ }
+  ])('envía las instrucciones configuradas para la narración $mode', async ({ visualMode, buttonName }) => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        description: {
+          title: 'Movilidad urbana',
+          description: 'Resumen.',
+          highlightedLayers: [],
+          observedPatterns: [],
+          limitations: []
+        }
+      })
+    })
+
+    render(<Widget {...baseProps({
+      config: {
+        apiUrl: 'https://narrator.example.com/api/map-description',
+        visualMode,
+        customPrompt: 'Focus on accessible connections.'
+      }
+    })} />)
+
+    await act(async () => {
+      mockMapViewHandlers.forEach(handler => handler({ view: mockView }))
+    })
+
+    const button = await screen.findByRole('button', { name: buttonName })
+    await act(async () => { (button as HTMLButtonElement).click() })
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled())
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).customPrompt).toBe('Focus on accessible connections.')
+  })
+
   it('bloquea el botón y muestra el indicador de actividad propio mientras espera a la API', async () => {
     const pending = deferred<any>()
     fetchMock.mockImplementation(() => pending.promise)
