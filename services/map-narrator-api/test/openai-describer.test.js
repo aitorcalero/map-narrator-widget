@@ -50,6 +50,25 @@ test('sends bounded structured-output request to the Responses API', async () =>
   assert.equal(result.title, 'Movilidad urbana')
 })
 
+test('applies a custom prompt to metadata narration with a larger output budget', async () => {
+  let sent
+  const describeMap = createOpenAIDescriber({
+    apiKey: 'test-key',
+    fetchImpl: async (_url, options) => {
+      sent = JSON.parse(options.body)
+      return new Response(JSON.stringify({ output_text: JSON.stringify({
+        title: 'Movilidad urbana', description: 'Resumen.', highlightedLayers: [], observedPatterns: [], limitations: []
+      }) }), { status: 200 })
+    }
+  })
+
+  await describeMap({ ...request, customPrompt: 'Focus on accessible connections.' })
+
+  assert.equal(sent.max_output_tokens, 1800)
+  assert.match(sent.input, /^Focus on accessible connections\./)
+  assert.match(sent.input, /never invent/i)
+})
+
 test('sends text and an image input for visual narration', async () => {
   let sent
   const describeMap = createOpenAIDescriber({
@@ -61,12 +80,13 @@ test('sends text and an image input for visual narration', async () => {
       }) }), { status: 200 })
     }
   })
-  await describeMap({ ...request, visual: { enabled: true, dataUrl: 'data:image/png;base64,iVBORw0KGgo=', mimeType: 'image/png', width: 10, height: 10 } })
+  await describeMap({ ...request, customPrompt: 'Focus on accessible connections.', visual: { enabled: true, dataUrl: 'data:image/png;base64,iVBORw0KGgo=', mimeType: 'image/png', width: 10, height: 10 } })
 
   assert.equal(Array.isArray(sent.input), true)
   assert.equal(sent.input[0].content[1].type, 'input_image')
   assert.equal(sent.input[0].content[1].image_url, 'data:image/png;base64,iVBORw0KGgo=')
   assert.equal(sent.input[0].content[1].detail, 'high')
+  assert.match(sent.input[0].content[0].text, /^Focus on accessible connections\./)
   assert.equal(sent.max_output_tokens, 2400)
 })
 

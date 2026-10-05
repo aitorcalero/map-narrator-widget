@@ -2,6 +2,7 @@ const crypto = require('node:crypto')
 const http = require('node:http')
 const { normalizeMapContext } = require('./map-context')
 const { normalizeVisualRequest } = require('./visual-request')
+const { normalizeCustomPrompt } = require('./prompt')
 
 const MAX_BODY_BYTES = 6 * 1024 * 1024
 const CACHE_TTL_MS = 5 * 60 * 1000
@@ -105,7 +106,14 @@ function createServer ({
       } catch (error) {
         const status = error.status ?? 502
         const code = error.code ?? 'UPSTREAM_ERROR'
-        return finish(status, { error: { code, message: status === 502 ? 'Speech service unavailable' : error.message } }, { stage: status === 400 ? 'validation' : 'upstream', code, upstreamRequestId: error.upstreamRequestId })
+        const message = code === 'ELEVENLABS_QUOTA_EXCEEDED'
+          ? 'ElevenLabs quota exceeded. Add credits and try again.'
+          : code === 'ELEVENLABS_TIMEOUT'
+            ? 'Speech generation timed out. Please retry.'
+            : status === 502
+              ? 'Speech service unavailable'
+              : error.message
+        return finish(status, { error: { code, message } }, { stage: status === 400 ? 'validation' : 'upstream', code, upstreamRequestId: error.upstreamRequestId })
       }
     }
     if (request.method !== 'POST' || request.url !== '/api/map-description') {
@@ -136,6 +144,14 @@ function createServer ({
       }
       const locale = typeof input.locale === 'string' && input.locale ? input.locale.slice(0, 16) : 'es'
       const style = typeof input.style === 'string' && input.style ? input.style.slice(0, 32) : 'technical'
+      let customPrompt
+      try {
+        customPrompt = normalizeCustomPrompt(input.customPrompt)
+      } catch (error) {
+        error.status = 400
+        error.code = 'INVALID_REQUEST'
+        throw error
+      }
       let visual
       if (input.visual?.enabled) {
         try {
@@ -146,7 +162,7 @@ function createServer ({
           throw error
         }
       }
-      const normalizedRequest = { context, locale, style, promptVersion: visual ? 'visual-v1' : 'v1', visual }
+      const normalizedRequest = { context, locale, style, customPrompt, promptVersion: visual ? 'visual-v1' : 'v1', visual }
       if (!visual) {
         const key = cacheKey(normalizedRequest)
         const cached = cache.get(key)
