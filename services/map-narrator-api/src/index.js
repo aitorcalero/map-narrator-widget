@@ -18,6 +18,7 @@ if (process.env.ELEVENLABS_API_KEY && process.env.ELEVENLABS_VOICE_ID) {
   synthesizeSpeech = createElevenLabsSynthesizer({
     apiKey: process.env.ELEVENLABS_API_KEY,
     voiceId: process.env.ELEVENLABS_VOICE_ID,
+    voiceIds: { en: process.env.ELEVENLABS_VOICE_ID_EN, es: process.env.ELEVENLABS_VOICE_ID_ES },
     model: process.env.ELEVENLABS_MODEL ?? 'eleven_multilingual_v2'
   })
 }

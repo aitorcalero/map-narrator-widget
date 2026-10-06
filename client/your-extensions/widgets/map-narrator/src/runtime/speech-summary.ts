@@ -1,3 +1,5 @@
+import type { LocaleMessages } from '../locale'
+
 export type SpeechDescription = {
   title: string
   description: string
@@ -20,15 +22,15 @@ function labelled (label: string, items: string[]): string {
   return items.length > 0 ? `${label}: ${items.join(' ')}` : ''
 }
 
-export function buildSpeechSummary (description: SpeechDescription): string {
+export function buildSpeechSummary (description: SpeechDescription, messages: LocaleMessages): string {
   const visualParts = [
     description.title,
-    labelled('Distribución espacial', nonEmpty(description.spatialLayout)),
-    labelled('Elementos visuales', nonEmpty(description.visualElements)),
-    labelled('Etiquetas visibles', nonEmpty(description.visibleLabels)),
-    labelled('Leyenda y símbolos', nonEmpty(description.legendAndSymbols)),
-    labelled('Patrones', nonEmpty(description.observedPatterns)),
-    labelled('Capas destacadas', nonEmpty(description.highlightedLayers))
+    labelled(messages.spatialLayout, nonEmpty(description.spatialLayout)),
+    labelled(messages.visualElements, nonEmpty(description.visualElements)),
+    labelled(messages.visibleLabels, nonEmpty(description.visibleLabels)),
+    labelled(messages.legendAndSymbols, nonEmpty(description.legendAndSymbols)),
+    labelled(messages.patterns, nonEmpty(description.observedPatterns)),
+    labelled(messages.highlightedLayers, nonEmpty(description.highlightedLayers))
   ].filter(Boolean)
 
   const summary = [

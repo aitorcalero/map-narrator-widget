@@ -101,7 +101,8 @@ function createServer ({
       try {
         const input = await readJson(request)
         const text = typeof input.text === 'string' ? input.text : ''
-        const result = await synthesizeSpeech(text)
+        const speechLocale = typeof input.locale === 'string' ? input.locale.slice(0, 2).toLowerCase() : undefined
+        const result = await synthesizeSpeech(text, { locale: speechLocale })
         return sendAudio(response, 200, result.audio, result.contentType)
       } catch (error) {
         const status = error.status ?? 502

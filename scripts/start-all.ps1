@@ -32,7 +32,7 @@ $builderUrl = "http://127.0.0.1:$builderPort"
 
 # Margenes de espera, en segundos.
 $apiReadyAttempts = 30
-$clientCompileGraceSeconds = 5
+$clientCompileAttempts = 150
 $builderReadyAttempts = 60
 $publicReadyAttempts = 30
 
@@ -208,8 +208,62 @@ function Resolve-FunnelChoice {
   return $answer -in @('s', 'si', 'sí')
 }
 
+# El cliente de Experience Builder es `webpack --watch` y no escucha en ningun
+# puerto, asi que Stop-ProcessesOnPorts no lo detiene. Varios watchers vivos a la
+# vez reescriben client\dist y dejan una compilacion antigua (version del widget
+# inconsistente).
+function Stop-WebpackWatchers {
+  param([string]$Root)
+
+  $clientDir = (Join-Path $Root 'client').TrimEnd('\')
+  $watchers = @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object {
+    $_.ProcessId -ne $PID -and $_.CommandLine -and
+    $_.CommandLine.IndexOf($clientDir, [System.StringComparison]::OrdinalIgnoreCase) -ge 0 -and
+    $_.CommandLine -match 'webpack|cross-env|pnpm'
+  })
+  if ($watchers.Count -eq 0) { return }
+
+  Write-Host "Deteniendo $($watchers.Count) proceso(s) webpack anteriores del cliente..."
+  $allIds = @($watchers | ForEach-Object {
+    @($_.ProcessId) + @(Get-DescendantProcessIds -RootId $_.ProcessId)
+  } | Select-Object -Unique)
+  foreach ($processId in ($allIds | Sort-Object -Descending)) {
+    Stop-Process -Id $processId -Force -ErrorAction SilentlyContinue
+  }
+  Start-Sleep -Seconds 2
+}
+
+function Get-JsonVersion {
+  param([string]$Path)
+  if (-not (Test-Path $Path)) { return $null }
+  return (Get-Content -Raw $Path | ConvertFrom-Json).version
+}
+
+# Espera a que webpack publique en client\dist la misma version que el fuente;
+# si no, el navegador seguiria mostrando una compilacion antigua.
+function Wait-ForWidgetBuild {
+  param([string]$DistWidgetDir, [string]$ExpectedVersion, [int]$Attempts, [System.Diagnostics.Process]$Process, [string]$ErrorLog)
+
+  $bundle = Join-Path $DistWidgetDir 'dist\runtime\widget.js'
+  $marker = [regex]::Escape("$ExpectedVersion") + '\s\S{1,3}\sstable'
+  for ($attempt = 1; $attempt -le $Attempts; $attempt++) {
+    if ($Process -and $Process.HasExited) {
+      $details = if (Test-Path $ErrorLog) { Get-Content -Raw $ErrorLog } else { '' }
+      throw "El cliente de Experience Builder termino durante la compilacion. $details"
+    }
+    if ((Get-JsonVersion (Join-Path $DistWidgetDir 'manifest.json')) -eq $ExpectedVersion -and (Test-Path $bundle) -and
+        (Select-String -Path $bundle -Pattern $marker -Quiet)) {
+      Write-Host "  Widget compilado: version $ExpectedVersion"
+      return
+    }
+    Start-Sleep -Seconds 2
+  }
+  throw "El widget compilado no alcanzo la version $ExpectedVersion tras $($Attempts * 2) segundos. Consulta $ErrorLog."
+}
+
 if ($Stop) {
   Stop-ProcessesOnPorts -Ports $narratorPorts
+  if ($ExperienceBuilderRoot) { Stop-WebpackWatchers -Root $ExperienceBuilderRoot }
   Write-Host 'Procesos de Map Narrator detenidos.'
   exit 0
 }
@@ -239,11 +293,24 @@ $widgetTarget = Join-Path $ExperienceBuilderRoot 'client\your-extensions\widgets
 if (-not (Test-Path (Join-Path $widgetSource 'manifest.json'))) {
   throw "No se encontró el widget fuente en '$widgetSource'."
 }
-New-Item -ItemType Directory -Force -Path $widgetTarget | Out-Null
-Copy-Item -Path (Join-Path $widgetSource '*') -Destination $widgetTarget -Recurse -Force
-Write-Host "Widget sincronizado en $widgetTarget"
-
+# Primero se detiene todo (incluidos los watchers de webpack) para que ningun
+# proceso antiguo reescriba la compilacion mientras se sincroniza el widget.
 Stop-ProcessesOnPorts -Ports $narratorPorts
+Stop-WebpackWatchers -Root $ExperienceBuilderRoot
+
+# /MIR elimina tambien los ficheros que ya no existen en el fuente.
+New-Item -ItemType Directory -Force -Path $widgetTarget | Out-Null
+& robocopy.exe $widgetSource $widgetTarget /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
+if ($LASTEXITCODE -ge 8) {
+  throw "No se pudo sincronizar el widget en '$widgetTarget' (robocopy $LASTEXITCODE)."
+}
+$global:LASTEXITCODE = 0
+$expectedVersion = Get-JsonVersion (Join-Path $widgetSource 'manifest.json')
+Write-Host "Widget $expectedVersion sincronizado en $widgetTarget"
+
+# Se descarta la compilacion anterior para que el cliente genere una nueva.
+$distWidgetDir = Join-Path $ExperienceBuilderRoot 'client\dist\widgets\map-narrator'
+if (Test-Path $distWidgetDir) { Remove-Item -Recurse -Force $distWidgetDir }
 
 New-Item -ItemType Directory -Force -Path $logDirectory | Out-Null
 $apiOutput = Join-Path $logDirectory 'api.out.log'
@@ -296,11 +363,7 @@ try {
   Write-Host 'Arrancando Experience Builder client...'
   $clientProcess = Start-Process -FilePath 'pnpm.cmd' -ArgumentList @('start') -WorkingDirectory (Join-Path $ExperienceBuilderRoot 'client') -RedirectStandardOutput $clientOutput -RedirectStandardError $clientError -PassThru
   Write-Host "  Experience Builder client PID: $($clientProcess.Id)"
-  Start-Sleep -Seconds $clientCompileGraceSeconds
-  if ($clientProcess.HasExited) {
-    $details = if (Test-Path $clientError) { Get-Content -Raw $clientError } else { '' }
-    throw "Experience Builder client termino antes de compilar. $details"
-  }
+  Wait-ForWidgetBuild -DistWidgetDir $distWidgetDir -ExpectedVersion $expectedVersion -Attempts $clientCompileAttempts -Process $clientProcess -ErrorLog $clientError
 
   Write-Host 'Arrancando Experience Builder...'
   $builderProcess = Start-Process -FilePath 'node.exe' -ArgumentList @('src/server', '--dev_edition', '--http_only') -WorkingDirectory (Join-Path $ExperienceBuilderRoot 'server') -RedirectStandardOutput $builderOutput -RedirectStandardError $builderError -PassThru

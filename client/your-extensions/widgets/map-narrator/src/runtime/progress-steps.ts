@@ -1,24 +1,29 @@
+import type { LocaleMessages } from '../locale'
+
 export interface ProgressStep {
   key: string
   label: string
 }
 
-/** Pasos reales del flujo de descripción en modo visual: captura de pantalla, envío a la API y procesamiento de la respuesta. */
-export const visualDescribeSteps: ProgressStep[] = [
-  { key: 'capture', label: 'Capturando la vista actual del mapa…' },
-  { key: 'send', label: 'Analizando visualmente el mapa…' },
-  { key: 'process', label: 'Procesando la respuesta de la API…' }
-]
+export function getVisualDescribeSteps (messages: LocaleMessages): ProgressStep[] {
+  return [
+    { key: 'capture', label: messages.progressCapture },
+    { key: 'send', label: messages.progressAnalyzeVisual },
+    { key: 'process', label: messages.progressProcessResponse }
+  ]
+}
 
-/** Pasos reales del flujo de descripción en modo metadatos: no hay captura, se envía directamente y se procesa la respuesta. */
-export const metadataDescribeSteps: ProgressStep[] = [
-  { key: 'send', label: 'Analizando la configuración visible del mapa…' },
-  { key: 'process', label: 'Procesando la respuesta de la API…' }
-]
+export function getMetadataDescribeSteps (messages: LocaleMessages): ProgressStep[] {
+  return [
+    { key: 'send', label: messages.progressAnalyzeMetadata },
+    { key: 'process', label: messages.progressProcessResponse }
+  ]
+}
 
-/** Pasos reales del flujo de generación de audio: preparar el resumen, sintetizar con ElevenLabs y descargar el resultado. */
-export const speechSteps: ProgressStep[] = [
-  { key: 'prepare', label: 'Preparando el resumen de audio…' },
-  { key: 'send', label: 'Sintetizando audio con ElevenLabs…' },
-  { key: 'download', label: 'Descargando el audio generado…' }
-]
+export function getSpeechSteps (messages: LocaleMessages): ProgressStep[] {
+  return [
+    { key: 'prepare', label: messages.progressPrepareSpeech },
+    { key: 'send', label: messages.progressSynthesizeSpeech },
+    { key: 'download', label: messages.progressDownloadSpeech }
+  ]
+}
