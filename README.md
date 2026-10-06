@@ -317,6 +317,11 @@ Si usas `https://127.0.0.1:3001` y ves errores de Service Worker SSL:
    - https://tailscale.com
    - Proporciona certificados TLS válidos para localhost
 
+## Servicios de terceros y privacidad
+
+- **Experience Builder y ArcGIS:** este repositorio solo contiene el widget y no redistribuye Experience Builder ni el SDK de ArcGIS. Necesitas tu propia instalación de Experience Builder Developer Edition y estás sujeto a los términos de Esri.
+- **OpenAI y ElevenLabs:** cada usuario aporta sus propias claves y acepta las condiciones de cada servicio. En ElevenLabs, el uso comercial depende de tu plan y de la licencia de la voz elegida.
+- **Privacidad:** para generar la descripción, el widget envía a OpenAI los metadatos de las capas y, en la descripción visual, una captura del mapa; el texto del resumen se envía a ElevenLabs para el audio. No lo uses con mapas confidenciales sin revisar antes las condiciones de estos servicios.
 ## Licencia
 
 Copyright © 2026 Aitor Calero García
